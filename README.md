@@ -29,17 +29,22 @@ A high-fidelity, modular astrodynamics simulation suite written in Python. It su
 
 ## Mathematical Formulations
 
-* **Central Body Gravity:** 
-  $\mathbf{a}_{\mathrm{grav}} = -\frac{\mu_{\mathrm{E}}}{r^3} \mathbf{r}$
+### Newtonian Acceleration Superposition Junction
+The equation of motion in the Earth-Centered Inertial (ECI) frame sums all central and non-spherical forces:
 
+$$\mathbf{a}_{\text{total}} = \mathbf{a}_{\text{grav}} + \mathbf{a}_{J2} + \mathbf{a}_{J3} + \mathbf{a}_{J4} + \mathbf{a}_{\text{lunar}} + \mathbf{a}_{\text{drag}} + \mathbf{a}_{\text{SRP}} + \mathbf{a}_{\text{thrust}}$$
+
+* **Central Body Gravity:**
+
+  $$\mathbf{a}_{\text{grav}} = -\frac{\mu_{\text{E}}}{r^3} \mathbf{r}$$
 
 * **Atmospheric Drag:**
-  $$\mathbf{a}_{\text{drag}} = -\frac{1}{2} \rho(h) \frac{C_D A_{\text{drag}}}{m} |\mathbf{v}_{\text{rel}}| \mathbf{v}_{\text{rel}}, \quad \mathbf{v}_{\text{rel}} = \mathbf{v} - (\vec{\omega}_{\text{E}} \times \mathbf{r})$$
 
+  $$\mathbf{a}_{\text{drag}} = -\frac{1}{2} \rho(h) \frac{C_D A_{\text{drag}}}{m} \|\mathbf{v}_{\text{rel}}\| \mathbf{v}_{\text{rel}}, \quad \mathbf{v}_{\text{rel}} = \mathbf{v} - (\vec{\omega}_{\text{E}} \times \mathbf{r})$$
 
-* **Solar Radiation Pressure (SRP):** 
-$\mathbf{a}_{\mathrm{SRP}} = P_{\mathrm{sun}} C_R \frac{A_{\mathrm{SRP}}}{m} \hat{\mathbf{r}}_{\mathrm{sun}} \quad (\text{zero in Earth umbra})$
----
+* **Solar Radiation Pressure (SRP):**
+
+  $$\mathbf{a}_{\text{SRP}} = P_{\text{sun}} C_R \frac{A_{\text{SRP}}}{m} \hat{\mathbf{r}}_{\text{sun}} \quad (\text{zero in Earth umbra})$$---
 ## Repository Architecture
 
 ```text
