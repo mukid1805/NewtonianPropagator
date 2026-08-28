@@ -8,6 +8,10 @@ A high-fidelity, modular astrodynamics simulation suite written in Python. It su
 
 ## Key Capabilities
 
+* **Interplanetary Mission Design:**
+  * Universal Variable Lambert solver (Bate-Mueller-White formulation) for robust two-point boundary value targeting (elliptical, parabolic, and hyperbolic transfers).
+  * Automated Porkchop Plot generation for launch window optimization scanning characteristic energy ($C_3$), arrival excess velocity ($v_\infty$), and total $\Delta v$.
+  * Analytical planetary ephemerides and precision astronomical time conversions (JD, MJD, J2000 offsets).
 * **Environmental Perturbation Superposition:**
   * Nonspherical Earth Geopotential Harmonics ($J_2$, $J_3$, $J_4$).
   * Atmospheric Drag with diurnal Earth rotation velocity coupling and exponential density scale height.
@@ -46,6 +50,11 @@ $$\mathbf{a}_{\text{drag}} = -\frac{1}{2} \rho(h) \frac{C_D A_{\text{drag}}}{m} 
 
 $$\mathbf{a}_{\text{SRP}} = P_{\text{sun}} C_R \frac{A_{\text{SRP}}}{m} \hat{\mathbf{r}}_{\text{sun}} \quad (\text{zero in Earth umbra})$$
 
+### Interplanetary Characteristic Energy
+Departure injection energy required for heliocentric transfer escapes:
+
+$$C_3 = v_\infty^2 = \Vert{}\mathbf{v}_{\text{dep}} - \mathbf{v}_{\text{planet}}\Vert{}^2$$
+
 ---
 ## Repository Architecture
 
@@ -58,10 +67,13 @@ NewtonianPropagator/
 │   ├── __init__.py        # Core package definitions
 │   ├── constants.py       # Planetary, gravitational, and astronomical constants
 │   ├── cr3bp.py           # CR3BP synodic dynamics, Lagrange solvers, frame transforms
+│   ├── ephemeris.py       # Analytical planetary ephemerides and state vectors
 │   ├── forces.py          # Vectorized acceleration models (Gravity, J2-J4, Drag, SRP, Thrust)
 │   ├── integrators.py     # Classical 4th-Order Runge-Kutta numerical solver
+│   ├── lambert.py         # Universal Variable Lambert problem solver
 │   ├── propagator.py      # Unified 6-DOF / 7-DOF spacecraft propagation engine
-│   └── swarm.py           # Multi-agent constellation and relative motion engine
+│   ├── swarm.py           # Multi-agent constellation and relative motion engine
+│   └── time.py            # Astronomical time conversions (JD, MJD, J2000 offsets)
 ├── customscripts/
 │   ├── __init__.py
 │   └── template_custom_orbit.py  # Parametric sandbox for custom mission design
@@ -72,10 +84,13 @@ NewtonianPropagator/
 │   ├── ex03_electric_orbit_raising.py
 │   ├── ex04_frozen_orbit_j3_j4.py
 │   ├── ex05_satellite_swarm_lvlh.py
-│   └── ex06_cislunar_free_return.py
+│   ├── ex06_cislunar_free_return.py
+│   └── ex07_earth_mars_transfer.py   
 ├── tests/
 │   ├── __init__.py
-│   └── test_energy_conservation.py # Numerical verification of RK4 energy conservation
+│   ├── test_energy_conservation.py
+│   ├── test_lambert.py    # Validation of BVP solver boundary conditions
+│   └── test_time.py       # Epoch and temporal conversion assertions
 ├── .gitignore             # Git exclusion rules
 ├── environment.yml        # Conda environment definition
 ├── main.py                # Interactive CLI menu

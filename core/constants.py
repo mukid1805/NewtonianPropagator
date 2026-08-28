@@ -27,3 +27,18 @@ P_SUN_1AU = 4.56e-6            # Solar radiation pressure flux at 1 AU (N/m^2)
 
 # Propulsion Reference Constants
 G0 = 9.80665                   # Standard gravity acceleration (m/s^2)
+
+# --- Heliocentric & Planetary Constants (SI Units) ---
+G_SUN = 1.32712440018e20      # Gravitational parameter of Sun [m^3 / s^2]
+AU = 1.495978707e11           # 1 Astronomical Unit [m]
+
+# Mean orbital radii [m]
+R_ORBIT_EARTH = 1.000 * AU
+R_ORBIT_MARS = 1.524 * AU
+R_ORBIT_VENUS = 0.723 * AU
+R_ORBIT_JUPITER = 5.204 * AU
+
+# Planetary Gravitational Parameters [m^3 / s^2]
+G_MARS = 4.282837e13
+G_VENUS = 3.24859e14
+G_JUPITER = 1.26686534e17
