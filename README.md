@@ -1,5 +1,7 @@
 # NewtonianPropagator: Multi-Body Orbital Dynamics & Swarm Simulation Engine
 
+[![CI Test Suite](https://github.com/mukid1805/NewtonianPropagator/actions/workflows/tests.yml/badge.svg)](https://github.com/mukid1805/NewtonianPropagator/actions/workflows/tests.yml)
+
 A high-fidelity, modular astrodynamics simulation suite written in Python. It supports non-linear 6-DOF/7-DOF orbital mechanics, environmental perturbation superposition, multi-agent relative motion (LVLH / Hill's frame), and Circular Restricted Three-Body Problem (CR3BP) cislunar dynamics.
 
 ---
@@ -61,6 +63,9 @@ $$\mathcal{C} = 2\Omega(x, y, z) - (\dot{x}^2 + \dot{y}^2 + \dot{z}^2) = \text{c
 
 ```text
 NewtonianPropagator/
+├── .github/
+│   └── workflows/
+│       └── tests.yml      # Automated CI test suite
 ├── core/
 │   ├── __init__.py        # Core package definitions
 │   ├── constants.py       # Planetary, gravitational, and astronomical constants
