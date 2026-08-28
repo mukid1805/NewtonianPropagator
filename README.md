@@ -29,36 +29,17 @@ A high-fidelity, modular astrodynamics simulation suite written in Python. It su
 
 ## Mathematical Formulations
 
-### 1. Newtonian Acceleration Superposition Junction
-The equation of motion in the Earth-Centered Inertial (ECI) frame sums all central and non-spherical forces:
+* **Central Body Gravity:** 
+  $\mathbf{a}_{\mathrm{grav}} = -\frac{\mu_{\mathrm{E}}}{r^3} \mathbf{r}$
 
-$$\mathbf{a}_{\text{total}} = \mathbf{a}_{\text{grav}} + \mathbf{a}_{J2} + \mathbf{a}_{J3} + \mathbf{a}_{J4} + \mathbf{a}_{\text{lunar}} + \mathbf{a}_{\text{drag}} + \mathbf{a}_{\text{SRP}} + \mathbf{a}_{\text{thrust}}$$
 
-* **Central Body Gravity:**
-  $$\mathbf{a}_{\text{grav}} = -\frac{\mu_\oplus}{r^3} \mathbf{r}$$
 * **Atmospheric Drag:**
-  $$\mathbf{a}_{\text{drag}} = -\frac{1}{2} \rho(h) \frac{C_D A_{\text{drag}}}{m} \Vert{}\mathbf{v}_{\text{rel}}\Vert{} \mathbf{v}_{\text{rel}}, \quad \mathbf{v}_{\text{rel}} = \mathbf{v} - (\boldsymbol{\omega}_\oplus \times \mathbf{r})$$
-* **Solar Radiation Pressure (SRP):**
-  $$\mathbf{a}_{\text{SRP}} = P_\odot C_R \frac{A_{\text{SRP}}}{m} \hat{\mathbf{r}}_{\text{sun}} \quad (\text{zero in Earth umbra})$$
+  $$\mathbf{a}_{\text{drag}} = -\frac{1}{2} \rho(h) \frac{C_D A_{\text{drag}}}{m} |\mathbf{v}_{\text{rel}}| \mathbf{v}_{\text{rel}}, \quad \mathbf{v}_{\text{rel}} = \mathbf{v} - (\vec{\omega}_{\text{E}} \times \mathbf{r})$$
 
-### 2. Hill-Clohessy-Wiltshire (LVLH) Rotating Frame
-The rotating basis centered on the Chief spacecraft ($\mathbf{r}_c, \mathbf{v}_c$) converts inertial offsets $\delta\mathbf{r} = \mathbf{r}_d - \mathbf{r}_c$ into local orbital coordinates:
 
-$$\hat{\mathbf{e}}_r = \frac{\mathbf{r}_c}{\Vert{}\mathbf{r}_c\Vert{}}, \quad \hat{\mathbf{e}}_h = \frac{\mathbf{r}_c \times \mathbf{v}_c}{\Vert{}\mathbf{r}_c \times \mathbf{v}_c\Vert{}}, \quad \hat{\mathbf{e}}_\theta = \hat{\mathbf{e}}_h \times \hat{\mathbf{e}}_r$$
-
-$$\delta\mathbf{r}_{\text{LVLH}} = \begin{bmatrix} \hat{\mathbf{e}}_r^T \\ \hat{\mathbf{e}}_\theta^T \\ \hat{\mathbf{e}}_h^T \end{bmatrix} \delta\mathbf{r}_{\text{ECI}}$$
-
-### 3. Circular Restricted Three-Body Problem (CR3BP)
-In the non-dimensional synodic frame with mass parameter $\mu = \frac{m_2}{m_1 + m_2}$:
-
-$$\ddot{x} - 2\dot{y} = \frac{\partial \Omega}{\partial x}, \quad \ddot{y} + 2\dot{x} = \frac{\partial \Omega}{\partial y}, \quad \ddot{z} = \frac{\partial \Omega}{\partial z}$$
-
-$$\Omega(x, y, z) = \frac{1}{2}(x^2 + y^2) + \frac{1-\mu}{r_1} + \frac{\mu}{r_2}$$
-
-$$\mathcal{C} = 2\Omega(x, y, z) - (\dot{x}^2 + \dot{y}^2 + \dot{z}^2) = \text{constant}$$
-
+* **Solar Radiation Pressure (SRP):** 
+$\mathbf{a}_{\mathrm{SRP}} = P_{\mathrm{sun}} C_R \frac{A_{\mathrm{SRP}}}{m} \hat{\mathbf{r}}_{\mathrm{sun}} \quad (\text{zero in Earth umbra})$
 ---
-
 ## Repository Architecture
 
 ```text
