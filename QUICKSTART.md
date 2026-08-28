@@ -49,9 +49,9 @@ Expected output:
 Number of Orbits: 5
 Initial Specific Energy: -28975901.5995 J/kg
 Maximum Relative Energy Drift: 4.52e-12
-.
+....
 ----------------------------------------------------------------------
-Ran 1 test in 0.342s
+Ran 4 tests in 0.485s
 
 OK
 ```
@@ -73,9 +73,10 @@ Expected output:
 4. Scenario 4: Higher-Order Harmonics (J3, J4) & Frozen Orbit
 5. Scenario 5: Multi-Agent Satellite Swarm & LVLH Relative Motion
 6. Scenario 6: Cislunar Free-Return Trajectory & Lagrange Points
-7. Exit
+7. Scenario 7: Interplanetary Porkchop Targeting & Transfer
+8. Exit
 =================================================================
-Select a scenario to run [1-7]:
+Select a scenario to run [1-8]:
 ```
 ---
 
@@ -90,11 +91,16 @@ python -m examples.ex05_satellite_swarm_lvlh
 
 # Apollo-style Earth-Moon figure-8 free-return & Lagrange points
 python -m examples.ex06_cislunar_free_return
+
+# Interplanetary Earth-Mars porkchop scan & Lambert transfer arc
+python -m examples.ex07_earth_mars_transfer
 ```
 ---
 
 ## 6. Minimal Python Code Example
 You can write custom simulations inside `customscripts/template_custom_orbit.py` or script them directly:
+
+### Example A: LEO Orbit with Perturbations
 
 ```python
 import numpy as np
@@ -122,5 +128,25 @@ times, states = engine.propagate(r0, v0, t_span=3 * period, dt=5.0)
 
 # 4. Render 3D orbit plot
 SpacecraftPropagator.plot_3d(states, title="Custom 500 km LEO Orbit with Drag & J2/J3")
+```
+
+### Example B: Interplanetary Lambert Targeting
+
+```python
+import numpy as np
+from core.ephemeris import get_planet_state, MU_SUN
+from core.lambert import solve_lambert
+
+# 1. Get Earth departure and Mars arrival states at specific epochs (MJD2000)
+r_earth, v_earth = get_planet_state('earth', mjd2000=9812.0)
+r_mars, v_mars = get_planet_state('mars', mjd2000=10122.0)
+
+# 2. Solve 2-point boundary value problem across 310 days
+tof_sec = 310.0 * 86400.0
+v_sc_dep, v_sc_arr = solve_lambert(r_earth, r_mars, tof_sec, MU_SUN, prograde=True)
+
+# 3. Compute injection C3 characteristic energy
+c3 = np.linalg.norm(v_sc_dep - v_earth)**2
+print(f"Required Departure C3 Energy: {c3:.2f} km^2/s^2")
 ```
 ---
