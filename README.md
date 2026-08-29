@@ -58,6 +58,7 @@ $$\mathbf{a}_{\text{SRP}} = P_{\text{sun}} C_R \frac{A_{\text{SRP}}}{m} \hat{\ma
 ### Interplanetary Characteristic Energy
 
 * **Departure Characteristic Energy ($C_3$):**
+
   $$C_3 = v_\infty^2 = \Vert{}\mathbf{v}_{\text{dep}} - \mathbf{v}_{\text{planet}}\Vert{}^2$$
 
 
