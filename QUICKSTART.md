@@ -15,7 +15,7 @@ Ensure you have either **Conda / Mamba** (recommended) or **Python 3.10+** insta
 ### Option A: Using Conda (Recommended)
 ```bash
 # Clone the repository
-git clone [https://github.com/](https://github.com/)<your-username>/NewtonianPropagator.git
+git clone [https://github.com/mukid1805/NewtonianPropagator.git](https://github.com/mukid1805/NewtonianPropagator.git)
 cd NewtonianPropagator
 
 # Create and activate the conda environment
@@ -26,7 +26,7 @@ conda activate astrodynamics
 ### Option B: Using Pip & Virtual Environment
 ```bash
 # Clone the repository
-git clone [https://github.com/](https://github.com/)<your-username>/NewtonianPropagator.git
+git clone [https://github.com/mukid1805/NewtonianPropagator.git](https://github.com/mukid1805/NewtonianPropagator.git)
 cd NewtonianPropagator
 
 # Create and activate a venv
@@ -41,7 +41,7 @@ pip install -r requirements.txt
 ## 3. Verify the Installation
 Run the automated numerical validation suite to verify the RK4 integrator's symplectic-like energy conservation:
 ```bash
-python -m unittest tests/test_energy_conservation.py
+python -m unittest discover tests
 ```
 Expected output:
 ```text
@@ -49,9 +49,9 @@ Expected output:
 Number of Orbits: 5
 Initial Specific Energy: -28975901.5995 J/kg
 Maximum Relative Energy Drift: 4.52e-12
-.....
+..........
 ----------------------------------------------------------------------
-Ran 5 tests in 0.645s
+Ran 10 tests in 0.574s
 
 OK
 ```
@@ -99,7 +99,11 @@ python -m examples.ex07_earth_mars_transfer
 ---
 
 ## 6. Minimal Python Code Example
-You can write custom simulations inside `customscripts/template_custom_orbit.py` or script them directly:
+You can write custom simulations directly using the starter templates in `customscripts/`:
+
+* `customscripts/template_custom_orbit.py`: High-order perturbation analysis and geocentric propagation.
+
+* `customscripts/template_interplanetary_mission.py`: Lambert boundary value targeting and launch vehicle injection sizing.
 
 ### Example A: LEO Orbit with Perturbations
 
@@ -131,14 +135,15 @@ times, states = engine.propagate(r0, v0, t_span=3 * period, dt=5.0)
 SpacecraftPropagator.plot_3d(states, title="Custom 500 km LEO Orbit with Drag & J2/J3")
 ```
 
-### Example B: Interplanetary Lambert Targeting
+### Example B: Interplanetary Lambert Targeting & Launch Vehicle Sizing
 
 ```python
 import numpy as np
 from core.ephemeris import get_planet_state, MU_SUN
 from core.lambert import solve_lambert
+from core.launchers import get_launcher
 
-# 1. Get Earth departure and Mars arrival states at specific epochs (MJD2000)
+# 1. Get Earth departure and Mars arrival states (MJD2000)
 r_earth, v_earth = get_planet_state('earth', mjd2000=9812.0)
 r_mars, v_mars = get_planet_state('mars', mjd2000=10122.0)
 
@@ -149,5 +154,17 @@ v_sc_dep, v_sc_arr = solve_lambert(r_earth, r_mars, tof_sec, MU_SUN, prograde=Tr
 # 3. Compute injection C3 characteristic energy
 c3 = np.linalg.norm(v_sc_dep - v_earth)**2
 print(f"Required Departure C3 Energy: {c3:.2f} km^2/s^2")
+
+# 4. Sizing with Launch Vehicle Performance Model
+lv = get_launcher("Falcon Heavy (Expendable)")
+payload_cap = lv.payload_to_c3(c3)
+print(f"Delivered Payload Capacity:   {payload_cap:.1f} kg")
+```
+
+#### Inspect Available Launch Vehicles
+Query all supported rocket performance curves directly from the terminal:
+
+```bash
+python -c "from core import list_available_launchers; print('\n'.join(x['name'] for x in list_available_launchers()))"
 ```
 ---

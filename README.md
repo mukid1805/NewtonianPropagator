@@ -11,12 +11,17 @@
 
 ---
 
-A high-fidelity, modular astrodynamics simulation suite written in Python. It supports non-linear 6-DOF/7-DOF orbital mechanics, environmental perturbation superposition, multi-agent relative motion (LVLH / Hill's frame), Circular Restricted Three-Body Problem (CR3BP) cislunar dynamics, and interplanetary multi-leg gravity assist trajectory optimization.
+A high-fidelity, modular astrodynamics simulation suite written in Python. It supports non-linear 6-DOF/7-DOF orbital mechanics, environmental perturbation superposition, launch vehicle $C_3$ injection modeling, multi-agent relative motion (LVLH / Hill's frame), Circular Restricted Three-Body Problem (CR3BP) cislunar dynamics, and interplanetary multi-leg gravity assist trajectory optimization.
 
 ---
 
 ## Key Capabilities
 
+
+* **Launch Vehicle Injection & Mission Energetics:**
+  * Empirical and analytical payload mass capacity curves as a function of characteristic energy ($C_3$).
+  * Built-in launch vehicle performance profiles across multiple configurations (e.g., Falcon 9, Falcon Heavy, Atlas V, Vulcan Centaur, SLS).
+  * Direct coupling between interplanetary Lambert departure energy ( $C_3$ ) and net deliverable spacecraft mass.
 * **Multi-Leg Trajectories & Planetary Gravity Assists:**
   * Hyperbolic turning angle ($\delta$) and excess velocity ($\mathbf{v}_\infty$) vector matching in planetary flyby frames.
   * Automated flyby feasibility checks (periapsis altitude $h_p \ge h_{\text{safe}}$ and powered $\Delta v$ deficit computation). 
@@ -93,12 +98,14 @@ NewtonianPropagator/
 │   ├── forces.py                      # Vectorized acceleration models (Gravity, J2-J4, Drag, SRP, Thrust)
 │   ├── integrators.py                 # Classical 4th-Order Runge-Kutta numerical solver
 │   ├── lambert.py                     # Universal Variable Lambert problem solver
+│   ├── launchers.py                   # Launch vehicle models and C3 payload capacity curves
 │   ├── propagator.py                  # Unified 6-DOF / 7-DOF spacecraft propagation engine
 │   ├── swarm.py                       # Multi-agent constellation and relative motion engine
 │   └── time.py                        # Astronomical time conversions (JD, MJD, J2000 offsets)
 ├── customscripts/
 │   ├── __init__.py
-│   └── template_custom_orbit.py      # Parametric sandbox for custom mission design
+│   ├── template_custom_orbit.py             # Parametric sandbox for custom mission design
+│   └── template_interplanetary_mission.py   # Starter template for Lambert targeting & launch analysis
 ├── examples/
 │   ├── __init__.py
 │   ├── ex01_lunar_impulsive_transfer.py
@@ -114,6 +121,7 @@ NewtonianPropagator/
 │   ├── test_energy_conservation.py    # Symplectic energy drift assertions
 │   ├── test_flyby.py                  # Gravity assist turning angle & Delta-V validation
 │   ├── test_lambert.py                # Validation of BVP solver boundary conditions
+│   ├── test_launchers.py              # Launch vehicle capacity & C3 performance curve assertions
 │   └── test_time.py                   # Epoch and temporal conversion assertions
 ├── .gitignore                         # Git exclusion rules
 ├── environment.yml                    # Conda environment definition
