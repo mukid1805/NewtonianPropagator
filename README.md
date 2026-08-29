@@ -2,6 +2,15 @@
 
 [![CI Test Suite](https://github.com/mukid1805/NewtonianPropagator/actions/workflows/tests.yml/badge.svg)](https://github.com/mukid1805/NewtonianPropagator/actions/workflows/tests.yml)
 
+
+
+[![Release](https://img.shields.io/github/v/release/mukid1805/NewtonianPropagator?color=blue&logo=github)](https://github.com/mukid1805/NewtonianPropagator/releases)
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/mukid1805/NewtonianPropagator/graphs/commit-activity)
+
+
+---
+
 A high-fidelity, modular astrodynamics simulation suite written in Python. It supports non-linear 6-DOF/7-DOF orbital mechanics, environmental perturbation superposition, multi-agent relative motion (LVLH / Hill's frame), Circular Restricted Three-Body Problem (CR3BP) cislunar dynamics, and interplanetary multi-leg gravity assist trajectory optimization.
 
 ---
