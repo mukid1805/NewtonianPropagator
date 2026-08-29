@@ -2,12 +2,17 @@
 
 [![CI Test Suite](https://github.com/mukid1805/NewtonianPropagator/actions/workflows/tests.yml/badge.svg)](https://github.com/mukid1805/NewtonianPropagator/actions/workflows/tests.yml)
 
-A high-fidelity, modular astrodynamics simulation suite written in Python. It supports non-linear 6-DOF/7-DOF orbital mechanics, environmental perturbation superposition, multi-agent relative motion (LVLH / Hill's frame), and Circular Restricted Three-Body Problem (CR3BP) cislunar dynamics.
+A high-fidelity, modular astrodynamics simulation suite written in Python. It supports non-linear 6-DOF/7-DOF orbital mechanics, environmental perturbation superposition, multi-agent relative motion (LVLH / Hill's frame), Circular Restricted Three-Body Problem (CR3BP) cislunar dynamics, and interplanetary multi-leg gravity assist trajectory optimization.
 
 ---
 
 ## Key Capabilities
 
+* **Multi-Leg Trajectories & Planetary Gravity Assists:**
+  * Hyperbolic turning angle ($\delta$) and excess velocity ($\mathbf{v}_\infty$) vector matching in planetary flyby frames.
+  * Automated flyby feasibility checks (periapsis altitude $h_p \ge h_{\text{safe}}$ and powered $\Delta v$ deficit computation). 
+  * Patched-conic multi-leg chaining across interplanetary bodies (e.g., Earth $\to$ Venus $\to$ Mars). 
+  * 3D calendar grid-search optimizer across departure, flyby, and arrival epochs for minimum-$\Delta v$ trajectory windows.
 * **Interplanetary Mission Design:**
   * Universal Variable Lambert solver (Bate-Mueller-White formulation) for robust two-point boundary value targeting (elliptical, parabolic, and hyperbolic transfers).
   * Automated Porkchop Plot generation for launch window optimization scanning characteristic energy ($C_3$), arrival excess velocity ($v_\infty$), and total $\Delta v$.
@@ -51,9 +56,12 @@ $$\mathbf{a}_{\text{drag}} = -\frac{1}{2} \rho(h) \frac{C_D A_{\text{drag}}}{m} 
 $$\mathbf{a}_{\text{SRP}} = P_{\text{sun}} C_R \frac{A_{\text{SRP}}}{m} \hat{\mathbf{r}}_{\text{sun}} \quad (\text{zero in Earth umbra})$$
 
 ### Interplanetary Characteristic Energy
-Departure injection energy required for heliocentric transfer escapes:
 
-$$C_3 = v_\infty^2 = \Vert{}\mathbf{v}_{\text{dep}} - \mathbf{v}_{\text{planet}}\Vert{}^2$$
+* **Departure Characteristic Energy ($C_3$):**
+  $$C_3 = v_\infty^2 = \Vert{}\mathbf{v}_{\text{dep}} - \mathbf{v}_{\text{planet}}\Vert{}^2$$
+
+* **Hyperbolic Turning Angle ($\delta$):**
+  $$\sin\left(\frac{\delta}{2}\right) = \frac{1}{1 + \frac{r_p v_\infty^2}{\mu_p}}$$
 
 ---
 ## Repository Architecture
@@ -62,21 +70,22 @@ $$C_3 = v_\infty^2 = \Vert{}\mathbf{v}_{\text{dep}} - \mathbf{v}_{\text{planet}}
 NewtonianPropagator/
 ├── .github/
 │   └── workflows/
-│       └── tests.yml      # Automated CI test suite
+│       └── tests.yml                  # Automated CI test suite
 ├── core/
-│   ├── __init__.py        # Core package definitions
-│   ├── constants.py       # Planetary, gravitational, and astronomical constants
-│   ├── cr3bp.py           # CR3BP synodic dynamics, Lagrange solvers, frame transforms
-│   ├── ephemeris.py       # Analytical planetary ephemerides and state vectors
-│   ├── forces.py          # Vectorized acceleration models (Gravity, J2-J4, Drag, SRP, Thrust)
-│   ├── integrators.py     # Classical 4th-Order Runge-Kutta numerical solver
-│   ├── lambert.py         # Universal Variable Lambert problem solver
-│   ├── propagator.py      # Unified 6-DOF / 7-DOF spacecraft propagation engine
-│   ├── swarm.py           # Multi-agent constellation and relative motion engine
-│   └── time.py            # Astronomical time conversions (JD, MJD, J2000 offsets)
+│   ├── __init__.py                    # Core package definitions
+│   ├── constants.py                   # Planetary, gravitational, and astronomical constants
+│   ├── cr3bp.py                       # CR3BP synodic dynamics, Lagrange solvers, frame transforms
+│   ├── ephemeris.py                   # Analytical planetary ephemerides and state vectors
+│   ├── flyby.py                       # Hyperbolic gravity assist mechanics and turning angle analysis
+│   ├── forces.py                      # Vectorized acceleration models (Gravity, J2-J4, Drag, SRP, Thrust)
+│   ├── integrators.py                 # Classical 4th-Order Runge-Kutta numerical solver
+│   ├── lambert.py                     # Universal Variable Lambert problem solver
+│   ├── propagator.py                  # Unified 6-DOF / 7-DOF spacecraft propagation engine
+│   ├── swarm.py                       # Multi-agent constellation and relative motion engine
+│   └── time.py                        # Astronomical time conversions (JD, MJD, J2000 offsets)
 ├── customscripts/
 │   ├── __init__.py
-│   └── template_custom_orbit.py  # Parametric sandbox for custom mission design
+│   └── template_custom_orbit.py      # Parametric sandbox for custom mission design
 ├── examples/
 │   ├── __init__.py
 │   ├── ex01_lunar_impulsive_transfer.py
@@ -85,15 +94,19 @@ NewtonianPropagator/
 │   ├── ex04_frozen_orbit_j3_j4.py
 │   ├── ex05_satellite_swarm_lvlh.py
 │   ├── ex06_cislunar_free_return.py
-│   └── ex07_earth_mars_transfer.py   
+│   ├── ex07_earth_mars_transfer.py
+│   └── ex08_gravity_assist_transfer.py
 ├── tests/
 │   ├── __init__.py
-│   ├── test_energy_conservation.py
-│   ├── test_lambert.py    # Validation of BVP solver boundary conditions
-│   └── test_time.py       # Epoch and temporal conversion assertions
-├── .gitignore             # Git exclusion rules
-├── environment.yml        # Conda environment definition
-├── main.py                # Interactive CLI menu
-├── QUICKSTART.md          # Rapid deployment instructions
-├── README.md              # Project documentation
-└── requirements.txt       # Pip requirements
+│   ├── test_energy_conservation.py    # Symplectic energy drift assertions
+│   ├── test_flyby.py                  # Gravity assist turning angle & Delta-V validation
+│   ├── test_lambert.py                # Validation of BVP solver boundary conditions
+│   └── test_time.py                   # Epoch and temporal conversion assertions
+├── .gitignore                         # Git exclusion rules
+├── environment.yml                    # Conda environment definition
+├── main.py                            # Interactive CLI menu
+├── QUICKSTART.md                      # Rapid deployment instructions
+├── README.md                          # Project documentation
+└── requirements.txt                   # Pip requirements
+```
+---

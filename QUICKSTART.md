@@ -49,9 +49,9 @@ Expected output:
 Number of Orbits: 5
 Initial Specific Energy: -28975901.5995 J/kg
 Maximum Relative Energy Drift: 4.52e-12
-....
+.....
 ----------------------------------------------------------------------
-Ran 4 tests in 0.485s
+Ran 5 tests in 0.645s
 
 OK
 ```
@@ -73,10 +73,11 @@ Expected output:
 4. Scenario 4: Higher-Order Harmonics (J3, J4) & Frozen Orbit
 5. Scenario 5: Multi-Agent Satellite Swarm & LVLH Relative Motion
 6. Scenario 6: Cislunar Free-Return Trajectory & Lagrange Points
-7. Scenario 7: Interplanetary Porkchop Targeting & Transfer
-8. Exit
+7. Scenario 7: Earth-to-Mars Interplanetary Mission Design & Flight Dynamics
+8. Scenario 8: Multi-Leg & Gravity Assist Transfers (Earth-Venus-Mars)
+9. Exit
 =================================================================
-Select a scenario to run [1-8]:
+Select a scenario to run [1-9]: 
 ```
 ---
 
