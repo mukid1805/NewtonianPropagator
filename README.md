@@ -12,7 +12,7 @@ A high-fidelity, modular astrodynamics simulation suite written in Python. It su
   * Hyperbolic turning angle ($\delta$) and excess velocity ($\mathbf{v}_\infty$) vector matching in planetary flyby frames.
   * Automated flyby feasibility checks (periapsis altitude $h_p \ge h_{\text{safe}}$ and powered $\Delta v$ deficit computation). 
   * Patched-conic multi-leg chaining across interplanetary bodies (e.g., Earth $\to$ Venus $\to$ Mars). 
-  * 3D calendar grid-search optimizer across departure, flyby, and arrival epochs for minimum-$\Delta v$ trajectory windows.
+  * 3D calendar grid-search optimizer across departure, flyby, and arrival epochs for minimum - $\Delta v$ trajectory windows.
 * **Interplanetary Mission Design:**
   * Universal Variable Lambert solver (Bate-Mueller-White formulation) for robust two-point boundary value targeting (elliptical, parabolic, and hyperbolic transfers).
   * Automated Porkchop Plot generation for launch window optimization scanning characteristic energy ($C_3$), arrival excess velocity ($v_\infty$), and total $\Delta v$.
@@ -60,8 +60,10 @@ $$\mathbf{a}_{\text{SRP}} = P_{\text{sun}} C_R \frac{A_{\text{SRP}}}{m} \hat{\ma
 * **Departure Characteristic Energy ($C_3$):**
   $$C_3 = v_\infty^2 = \Vert{}\mathbf{v}_{\text{dep}} - \mathbf{v}_{\text{planet}}\Vert{}^2$$
 
+
 * **Hyperbolic Turning Angle ($\delta$):**
   $$\sin\left(\frac{\delta}{2}\right) = \frac{1}{1 + \frac{r_p v_\infty^2}{\mu_p}}$$
+
 
 ---
 ## Repository Architecture

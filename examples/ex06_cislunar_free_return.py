@@ -1,6 +1,6 @@
 """
 Scenario 6: Cislunar Free-Return Trajectory & Earth-Moon Lagrange Points in CR3BP.
-Propagates an Apollo-style Figure-8 free-return path and plots both Synodic & Inertial frames.
+Propagates an Apollo-style free-return path and plots both Synodic & Inertial frames.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,8 +45,8 @@ def run():
     c0 = compute_jacobi_constant(state0, MU_EARTH_MOON)
     print(f"\nInitial State Trans-Lunar Jacobi Constant C = {c0:.6f}")
 
-    # 3. Propagate in Synodic Frame across ~7.5 days (~1.72 non-dimensional time)
-    t_span_nd = 1.72
+    # 3. Propagate in Synodic Frame
+    t_span_nd = 2.4 #(1 non-dimensional time = ~ 4.35 days)
     dt_nd = 0.0001
     num_steps = int(t_span_nd / dt_nd)
 
@@ -55,8 +55,13 @@ def run():
     states_syn[0] = state0
 
     print(f"Propagating {t_span_nd * T_STAR / 86400.0:.2f}-day cislunar free-return path...")
+
+    # PATCH 1: Wrap derivatives to pass MU_EARTH_MOON to RK4
+    def cr3bp_derivs_wrapped(t, state):
+        return cr3bp_derivatives(t, state, MU_EARTH_MOON)
+
     for i in range(1, num_steps):
-        states_syn[i] = rk4_step(cr3bp_derivatives, times_nd[i - 1], states_syn[i - 1], dt_nd)
+        states_syn[i] = rk4_step(cr3bp_derivs_wrapped, times_nd[i - 1], states_syn[i - 1], dt_nd)
 
     c_final = compute_jacobi_constant(states_syn[-1], MU_EARTH_MOON)
     print(f"Jacobi Constant Drift: {abs(c_final - c0):.2e}")
@@ -68,18 +73,23 @@ def run():
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14.0, 6.0))
 
     # --- Subplot 1: Earth-Moon Synodic (Rotating) Frame ---
-    # Trajectory
     ax1.plot(states_syn[:, 0], states_syn[:, 1], color='crimson', linewidth=1.5, label='Free-Return Path')
 
-    # Earth and Moon
     ax1.scatter(-MU_EARTH_MOON, 0.0, color='dodgerblue', s=180, edgecolors='black', label='Earth', zorder=5)
     ax1.scatter(1.0 - MU_EARTH_MOON, 0.0, color='gray', s=70, edgecolors='black', label='Moon', zorder=5)
 
-    # Plot Lagrange Points
+    theta_orbit = np.linspace(0, 2 * np.pi, 300)
+    x_moon_orbit = -MU_EARTH_MOON + 1.0 * np.cos(theta_orbit)
+    y_moon_orbit = 1.0 * np.sin(theta_orbit)
+    ax1.plot(x_moon_orbit, y_moon_orbit, color='silver', linestyle='--', linewidth=1.0, label="Lunar Distance", zorder=1)
+
     l_colors = {'L1': 'gold', 'L2': 'orange', 'L3': 'teal', 'L4': 'purple', 'L5': 'magenta'}
     for name, coord in lagrange_pts.items():
-        ax1.scatter(coord[0], coord[1], color=l_colors[name], s=50, marker='^', edgecolors='black', label=f'{name}',
-                    zorder=4)
+        ax1.scatter(coord[0], coord[1], color=l_colors[name], s=50, marker='^', edgecolors='black', label=f'{name}', zorder=4)
+
+    # Lock synodic zoom so it doesn't auto-scale out
+    ax1.set_xlim([-1.2, 1.2])
+    ax1.set_ylim([-1.2, 1.2])
 
     ax1.set_xlabel('Synodic X (Non-Dimensional)')
     ax1.set_ylabel('Synodic Y (Non-Dimensional)')
@@ -94,14 +104,20 @@ def run():
 
     ax2.plot(x_eci, y_eci, color='crimson', linewidth=1.5, label='Spacecraft Inertial Path')
 
-    # Plot Moon's circular orbit
     theta_orbit = np.linspace(0, 2 * np.pi, 200)
     r_moon_km = L_STAR / 1000.0
-    ax2.plot(r_moon_km * np.cos(theta_orbit), r_moon_km * np.sin(theta_orbit), color='silver', linestyle='--',
-             label="Moon's Orbit")
+    ax2.plot(r_moon_km * np.cos(theta_orbit), r_moon_km * np.sin(theta_orbit), color='silver', linestyle='--', label="Moon's Orbit")
 
-    # Earth center
     ax2.scatter(0.0, 0.0, color='dodgerblue', s=180, edgecolors='black', label='Earth (Origin)', zorder=5)
+
+    # Plot Moon position at Launch (t=0) and Return (t_end)
+    ax2.scatter(r_moon_km, 0.0, color='lightgray', s=60, edgecolors='black', label='Moon @ Launch', zorder=4)
+    t_end_rad = times_nd[-1]
+    ax2.scatter(r_moon_km * np.cos(t_end_rad), r_moon_km * np.sin(t_end_rad), color='gray', s=80, edgecolors='black', label='Moon @ Return', zorder=5)
+
+    # MANUAL ZOOM: Lock the axes to 500,000 km so the Moon doesn't shrink to a pixel
+    ax2.set_xlim([-500000, 500000])
+    ax2.set_ylim([-500000, 500000])
 
     ax2.set_xlabel('ECI X (km)')
     ax2.set_ylabel('ECI Y (km)')

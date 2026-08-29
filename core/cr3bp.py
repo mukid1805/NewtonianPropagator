@@ -72,7 +72,7 @@ def compute_lagrange_points(mu: float = MU_EARTH_MOON) -> dict:
     }
 
 
-def synodic_to_inertial(times_nd: np.ndarray, states_nd: np.ndarray, mu: float = MU_EARTH_MOON):
+def synodic_to_inertial(times_nd: np.ndarray, states_nd: np.ndarray, mu: float = MU_EARTH_MOON) -> np.ndarray:
     """
     Transforms non-dimensional synodic states into dimensional Earth-Centered Inertial (ECI) coordinates (km, km/s).
     """
@@ -85,19 +85,31 @@ def synodic_to_inertial(times_nd: np.ndarray, states_nd: np.ndarray, mu: float =
         t = times_nd[i]
         theta = t  # In non-dimensional units, n = 1 rad/nd_time
 
-        # 2D in-plane rotation matrix around Z-axis
         cos_t, sin_t = np.cos(theta), np.sin(theta)
+
+        # Position rotation matrix
         r_rot = np.array([
             [cos_t, -sin_t, 0.0],
-            [sin_t, cos_t, 0.0],
-            [0.0, 0.0, 1.0]
+            [sin_t,  cos_t, 0.0],
+            [0.0,    0.0,   1.0]
         ])
 
-        # Position relative to Earth
-        r_syn_rel_earth = states_nd[i, 0:3] - earth_offset_nd
-        r_eci_nd = r_rot @ r_syn_rel_earth
+        # Derivative of rotation matrix (d/dt with n = 1)
+        r_dot = np.array([
+            [-sin_t, -cos_t, 0.0],
+            [ cos_t, -sin_t, 0.0],
+            [ 0.0,    0.0,   0.0]
+        ])
 
-        # Convert to kilometers
+        r_syn = states_nd[i, 0:3] - earth_offset_nd
+        v_syn = states_nd[i, 3:6]
+
+        # Kinematic velocity transformation: v_inertial = R * v_syn + R_dot * r_syn
+        r_eci_nd = r_rot @ r_syn
+        v_eci_nd = r_rot @ v_syn + r_dot @ r_syn
+
+        # Convert to km and km/s
         states_eci_km[i, 0:3] = r_eci_nd * (L_STAR / 1000.0)
+        states_eci_km[i, 3:6] = v_eci_nd * (V_STAR / 1000.0)
 
     return states_eci_km
