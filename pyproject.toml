@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=64.0", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "newtonian-propagator"
+dynamic = ["version"]
+description = "Multi-Body Orbital Dynamics, Interplanetary Targeting & Swarm Engine"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.22.0",
+    "scipy>=1.9.0",
+    "matplotlib>=3.5.0"
+]
+
+[tool.setuptools_scm]
+write_to = "core/_version.py"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*"]

@@ -41,3 +41,6 @@ venv.bak/
 
 # Output figures / test cache
 .pytest_cache/
+
+# setuptools-scm build output
+core/_version.py
