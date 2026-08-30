@@ -44,3 +44,4 @@ venv.bak/
 
 # setuptools-scm build output
 core/_version.py
+.idea_backup/
