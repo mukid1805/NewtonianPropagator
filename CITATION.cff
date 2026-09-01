@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use NewtonianPropagator in your research or mission design workflows, please cite it as below."
+title: "NewtonianPropagator: A Modular Multi-Body Astrodynamics and Trajectory Optimization Engine"
+abstract: >-
+  NewtonianPropagator is a high-fidelity astrodynamics simulation engine written in Python.
+  It provides multi-body gravitational propagation, Circular Restricted Three-Body Problem (CR3BP)
+  dynamics, perturbed orbital mechanics (J2–J4, SRP, atmospheric drag), Lambert boundary-value
+  targeting, low-thrust propulsion modeling, and launch vehicle C3 capacity analysis.
+type: software
+authors:
+  - given-names: "Mukid"
+    family-names: "Valsangkar"
+    orcid: "https://orcid.org/0009-0007-8845-1605"
+    affiliation: "Independent Researcher"
+repository-code: "https://github.com/mukid1805/NewtonianPropagator"
+url: "https://github.com/mukid1805/NewtonianPropagator"
+keywords:
+  - "astrodynamics"
+  - "orbital-mechanics"
+  - "cr3bp"
+  - "lambert-solver"
+  - "porkchop-plot"
+  - "spacecraft-trajectory"
+  - "n-body-simulation"
+  - "mission-design"
+version: "0.9.1"
+date-released: "2026-09-01"

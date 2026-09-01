@@ -88,24 +88,26 @@ $$\sin\left(\frac{\delta}{2}\right) = \frac{1}{1 + \frac{r_p v_\infty^2}{\mu_p}}
 NewtonianPropagator/
 ├── .github/
 │   └── workflows/
-│       └── tests.yml                  # Automated CI test suite
+│       ├── tests.yml                  # Automated multi-OS CI test pipeline
+│       └── update-citation.yml        # Automated CITATION.cff tag sync workflow
 ├── core/
-│   ├── __init__.py                    # Core package definitions
+│   ├── __init__.py                    # Dynamic package definitions and version hook
+│   ├── _version.py                    # Generated dynamic version file (setuptools-scm)
 │   ├── constants.py                   # Planetary, gravitational, and astronomical constants
 │   ├── cr3bp.py                       # CR3BP synodic dynamics, Lagrange solvers, frame transforms
 │   ├── ephemeris.py                   # Analytical planetary ephemerides and state vectors
 │   ├── flyby.py                       # Hyperbolic gravity assist mechanics and turning angle analysis
 │   ├── forces.py                      # Vectorized acceleration models (Gravity, J2-J4, Drag, SRP, Thrust)
-│   ├── integrators.py                 # Classical 4th-Order Runge-Kutta numerical solver
+│   ├── integrators.py                 # Numerical propagation solvers (Classical RK4)
 │   ├── lambert.py                     # Universal Variable Lambert problem solver
-│   ├── launchers.py                   # Launch vehicle models and C3 payload capacity curves
+│   ├── launchers.py                   # Multi-agency launch vehicle catalog (ISRO, SpaceX, NASA, ULA) & C3 curves
 │   ├── propagator.py                  # Unified 6-DOF / 7-DOF spacecraft propagation engine
 │   ├── swarm.py                       # Multi-agent constellation and relative motion engine
 │   └── time.py                        # Astronomical time conversions (JD, MJD, J2000 offsets)
 ├── customscripts/
 │   ├── __init__.py
-│   ├── template_custom_orbit.py             # Parametric sandbox for custom mission design
-│   └── template_interplanetary_mission.py   # Starter template for Lambert targeting & launch analysis
+│   ├── template_custom_orbit.py             # Parametric sandbox for custom orbital propagation
+│   └── template_interplanetary_mission.py   # Starter template for Lambert targeting & launch sizing
 ├── examples/
 │   ├── __init__.py
 │   ├── ex01_lunar_impulsive_transfer.py
@@ -118,16 +120,19 @@ NewtonianPropagator/
 │   └── ex08_gravity_assist_transfer.py
 ├── tests/
 │   ├── __init__.py
-│   ├── test_energy_conservation.py    # Symplectic energy drift assertions
+│   ├── test_energy_conservation.py    # Specific mechanical energy drift assertions
 │   ├── test_flyby.py                  # Gravity assist turning angle & Delta-V validation
 │   ├── test_lambert.py                # Validation of BVP solver boundary conditions
-│   ├── test_launchers.py              # Launch vehicle capacity & C3 performance curve assertions
+│   ├── test_launchers.py              # Empirical C3 curve decay & Tsiolkovsky multi-stage tests
 │   └── test_time.py                   # Epoch and temporal conversion assertions
-├── .gitignore                         # Git exclusion rules
+├── .gitignore                         # Git exclusion rules (build artifacts, caches, IDE backups)
+├── CITATION.cff                       # Citation File Format specification for academic referencing
 ├── environment.yml                    # Conda environment definition
-├── main.py                            # Interactive CLI menu
+├── main.py                            # Interactive CLI demonstration menu
+├── pyproject.toml                     # PEP 517/621 package build config with dynamic setuptools-scm
 ├── QUICKSTART.md                      # Rapid deployment instructions
-├── README.md                          # Project documentation
+├── README.md                          # Project documentation and engineering guide
 └── requirements.txt                   # Pip requirements
+
 ```
 ---
