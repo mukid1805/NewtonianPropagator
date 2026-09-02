@@ -45,13 +45,22 @@ python -m unittest discover tests
 ```
 Expected output:
 ```text
---- Energy Conservation Verification ---
+.....
+--- RK45 Adaptive Energy Conservation Verification ---
+Orbit Type: Highly Elliptical GTO (e = 0.7265)
+Number of Orbits: 3
+Total Adaptive Steps Taken: 838
+Initial Specific Energy: -8160972.2307 J/kg
+Maximum Relative Energy Drift: 8.14e-10
+.
+--- RK4 Energy Conservation Verification ---
+Orbit Type: Circular LEO (e = 0)
 Number of Orbits: 5
 Initial Specific Energy: -28975901.5995 J/kg
 Maximum Relative Energy Drift: 4.52e-12
-..........
+...................
 ----------------------------------------------------------------------
-Ran 10 tests in 0.574s
+Ran 25 tests in 0.471s
 
 OK
 ```

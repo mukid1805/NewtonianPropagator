@@ -1,11 +1,19 @@
 """
-Unified Spacecraft Propagator engine supporting 6-DOF (r, v) and 7-DOF (r, v, m) dynamics.
-"""
-import numpy as np
-import matplotlib.pyplot as plt
+Unified Spacecraft Numerical Propagation Engine.
 
-from core.constants import R_EARTH, G0
-from core.integrators import rk4_step
+Supports 6-DOF (r, v) and 7-DOF (r, v, m) orbital trajectory simulation
+under primary two-body gravity, zonal harmonics (J2-J4), third-body lunar perturbations,
+atmospheric drag, solar radiation pressure (SRP), and continuous thrust.
+
+Provides selectable numerical integration backends:
+- 'rk4': Fixed-step 4th-order Runge-Kutta.
+- 'rk45': Adaptive step-size Dormand-Prince 5(4) with embedded LTE control.
+"""
+
+from typing import Tuple, Optional, Callable
+import numpy as np
+
+from core.constants import G_EARTH, R_EARTH, G0
 from core.forces import (
     accel_earth_gravity,
     accel_j2_perturbation,
@@ -14,155 +22,183 @@ from core.forces import (
     accel_lunar_gravity,
     accel_atmospheric_drag,
     accel_solar_radiation_pressure,
-    accel_fixed_thrust,
     accel_electric_prograde,
-    rv_to_keplerian
 )
+from core.integrators import rk4, rk45_adaptive
 
 
 class SpacecraftPropagator:
+    """
+    Unified orbital propagation engine with modular force additions
+    and multiple numerical integration backends.
+    """
+
     def __init__(
         self,
-        mass: float = 500.0,
-        drag_area: float = 2.0,
-        cd: float = 2.2,
-        srp_area: float = 4.0,
-        cr: float = 1.2,
-        isp: float = 1800.0,
+        mu: float = G_EARTH,
+        r_body: float = R_EARTH,
         use_j2: bool = True,
         use_j3: bool = False,
         use_j4: bool = False,
         use_lunar: bool = False,
         use_drag: bool = False,
-        use_srp: bool = False
+        use_srp: bool = False,
+        use_thrust: bool = False,
+        cd: float = 2.2,
+        area_drag: float = 1.0,
+        cr: float = 1.8,
+        area_srp: float = 1.0,
+        thrust_mag: float = 0.0,
+        isp: float = 3000.0,
+        thrust_steering_law: Optional[Callable[[float, np.ndarray, np.ndarray, float], np.ndarray]] = None,
     ):
-        self.mass = mass
-        self.drag_area = drag_area
-        self.cd = cd
-        self.srp_area = srp_area
-        self.cr = cr
-        self.isp = isp
-
-        # Perturbation flags
+        self.mu = mu
+        self.r_body = r_body
         self.use_j2 = use_j2
         self.use_j3 = use_j3
         self.use_j4 = use_j4
         self.use_lunar = use_lunar
         self.use_drag = use_drag
         self.use_srp = use_srp
+        self.use_thrust = use_thrust
 
-        # Thrust configuration
-        self.thrust_mode = "none"
-        self.thrust_params = {}
+        self.cd = cd
+        self.area_drag = area_drag
+        self.cr = cr
+        self.area_srp = area_srp
+        self.thrust_mag = thrust_mag
+        self.isp = isp
+        self.thrust_steering_law = thrust_steering_law
 
-    def configure_fixed_burn(self, start_t: float, duration: float, thrust_vec: np.ndarray):
-        """Configure a directional thrust burn (thrust_vec in Newtons)."""
-        self.thrust_mode = "fixed"
-        self.thrust_params = {"start_t": start_t, "duration": duration, "vec": thrust_vec}
-
-    def configure_electric_burn(self, thrust_magnitude: float):
-        """Configure continuous prograde low thrust (thrust_magnitude in Newtons)."""
-        self.thrust_mode = "electric_prograde"
-        self.thrust_params = {"thrust": thrust_magnitude}
-
-    def derivatives(self, t: float, state: np.ndarray) -> np.ndarray:
-        """
-        Summation Junction:
-        Computes total derivative vector [dr/dt, dv/dt, dm/dt].
-        """
+    def _derivatives_6dof(self, t: float, state: np.ndarray, mass: float) -> np.ndarray:
+        """Evaluates time derivative for 6-DOF state [x, y, z, vx, vy, vz]."""
         r = state[0:3]
         v = state[3:6]
-        current_mass = state[6] if len(state) == 7 else self.mass
 
-        # Central Newtonian gravity
-        a_total = accel_earth_gravity(r)
+        # Primary central point-mass acceleration
+        acc = accel_earth_gravity(r)
 
-        # Superposition of Perturbations
+        # Geopotential zonal harmonics
         if self.use_j2:
-            a_total += accel_j2_perturbation(r)
+            acc = acc + accel_j2_perturbation(r)
         if self.use_j3:
-            a_total += accel_j3_perturbation(r)
+            acc = acc + accel_j3_perturbation(r)
         if self.use_j4:
-            a_total += accel_j4_perturbation(r)
+            acc = acc + accel_j4_perturbation(r)
+
+        # Third-body lunar gravity
         if self.use_lunar:
-            a_total += accel_lunar_gravity(r, t)
+            acc = acc + accel_lunar_gravity(r, t)
+
+        # Atmospheric drag
         if self.use_drag:
-            a_total += accel_atmospheric_drag(r, v, self.cd, self.drag_area, current_mass)
+            acc = acc + accel_atmospheric_drag(r, v, cd=self.cd, area=self.area_drag, mass=mass)
+
+        # Solar Radiation Pressure (cannonball model with cylindrical shadow)
         if self.use_srp:
-            a_total += accel_solar_radiation_pressure(r, self.cr, self.srp_area, current_mass)
+            acc = acc + accel_solar_radiation_pressure(r, cr=self.cr, area=self.area_srp, mass=mass)
 
-        # Thrust & Mass Depletion
-        m_dot = 0.0
-        if self.thrust_mode == "fixed":
-            a_total += accel_fixed_thrust(
-                t,
-                self.thrust_params["start_t"],
-                self.thrust_params["duration"],
-                self.thrust_params["vec"],
-                current_mass
+        # Continuous thrust acceleration
+        if self.use_thrust:
+            if self.thrust_steering_law is not None:
+                acc = acc + self.thrust_steering_law(t, r, v, mass)
+            elif self.thrust_mag > 0.0:
+                acc = acc + accel_electric_prograde(v, thrust_mag=self.thrust_mag, mass=mass)
+
+        return np.concatenate([v, acc])
+
+    def _derivatives_7dof(self, t: float, state: np.ndarray) -> np.ndarray:
+        """Evaluates time derivative for 7-DOF state [x, y, z, vx, vy, vz, m]."""
+        mass = float(max(state[6], 1e-3))
+        derivs_6dof = self._derivatives_6dof(t, state[:6], mass=mass)
+
+        # Mass depletion rate: m_dot = - Thrust / (Isp * g0)
+        if self.use_thrust and self.thrust_mag > 0.0:
+            m_dot = -self.thrust_mag / (self.isp * G0)
+        else:
+            m_dot = 0.0
+
+        return np.append(derivs_6dof, m_dot)
+
+    def propagate(
+        self,
+        r0: np.ndarray,
+        v0: np.ndarray,
+        t_span: float,
+        dt: float = 10.0,
+        mass0: Optional[float] = None,
+        method: str = "rk4",
+        rtol: float = 1e-8,
+        atol: float = 1e-10,
+        h_min: float = 1e-4,
+        h_max: float = 86400.0,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Propagates spacecraft state vectors over the specified duration.
+
+        Parameters
+        ----------
+        r0 : np.ndarray
+            Initial position vector [x, y, z] in meters.
+        v0 : np.ndarray
+            Initial velocity vector [vx, vy, vz] in meters/second.
+        t_span : float
+            Total propagation duration in seconds (0 to t_span).
+        dt : float, optional
+            Fixed time step for 'rk4' or initial step candidate for 'rk45' (default: 10.0 s).
+        mass0 : Optional[float], optional
+            Initial spacecraft mass in kg. If provided, integrates as 7-DOF [r, v, m].
+            If None, integrates as 6-DOF [r, v] using 1000 kg for drag/SRP calculations.
+        method : str, optional
+            Integration routine: 'rk4' (fixed step) or 'rk45' (adaptive Dormand-Prince).
+            Default is 'rk4'.
+        rtol : float, optional
+            Relative error tolerance for 'rk45' (default: 1e-8).
+        atol : float, optional
+            Absolute error tolerance for 'rk45' (default: 1e-10).
+        h_min : float, optional
+            Minimum time step for 'rk45' in seconds (default: 1e-4 s).
+        h_max : float, optional
+            Maximum time step for 'rk45' in seconds (default: 86400.0 s).
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            - times: 1D array of time stamps (seconds).
+            - states: 2D array of state vectors shape (N, 6) or (N, 7).
+        """
+        r0_arr = np.asarray(r0, dtype=np.float64)
+        v0_arr = np.asarray(v0, dtype=np.float64)
+
+        if mass0 is not None:
+            initial_state = np.concatenate([r0_arr, v0_arr, [float(mass0)]])
+            derivs = self._derivatives_7dof
+        else:
+            initial_state = np.concatenate([r0_arr, v0_arr])
+            constant_mass = 1000.0
+            derivs = lambda t, y: self._derivatives_6dof(t, y, mass=constant_mass)
+
+        chosen_method = (method or "rk4").strip().lower()
+
+        if chosen_method == "rk4":
+            return rk4(
+                derivs_func=derivs,
+                t_span=(0.0, float(t_span)),
+                y0=initial_state,
+                dt=float(dt),
             )
-        elif self.thrust_mode == "electric_prograde":
-            t_mag = self.thrust_params["thrust"]
-            if current_mass > 20.0:  # Minimum dry mass bound
-                a_total += accel_electric_prograde(v, t_mag, current_mass)
-                m_dot = -t_mag / (G0 * self.isp)
-
-        if len(state) == 7:
-            return np.concatenate((v, a_total, [m_dot]))
-        return np.concatenate((v, a_total))
-
-    def propagate(self, r0: np.ndarray, v0: np.ndarray, t_span: float, dt: float, track_mass: bool = False):
-        """Propagate state vector across time span."""
-        num_steps = int(t_span / dt)
-        times = np.linspace(0, t_span, num_steps)
-        state_dim = 7 if track_mass else 6
-        states = np.zeros((num_steps, state_dim))
-
-        states[0] = np.concatenate((r0, v0, [self.mass])) if track_mass else np.concatenate((r0, v0))
-
-        for i in range(1, num_steps):
-            states[i] = rk4_step(self.derivatives, times[i - 1], states[i - 1], dt)
-
-        return times, states
-
-    @staticmethod
-    def plot_3d(states: np.ndarray, title: str = "Trajectory"):
-        """Plot the computed 3D orbit trajectory around a scaled Earth sphere."""
-        x_km = states[:, 0] / 1000.0
-        y_km = states[:, 1] / 1000.0
-        z_km = states[:, 2] / 1000.0
-
-        fig = plt.figure(figsize=(10.0, 8.0))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Draw Earth
-        r_earth_km = R_EARTH / 1000.0
-        u, v = np.mgrid[0:2 * np.pi:30j, 0:np.pi:15j]
-        ax.plot_wireframe(
-            r_earth_km * np.cos(u) * np.sin(v),
-            r_earth_km * np.sin(u) * np.sin(v),
-            r_earth_km * np.cos(v),
-            color='dodgerblue', alpha=0.25, label='Earth'
-        )
-
-        # Plot trajectory
-        ax.plot(x_km, y_km, z_km, color='crimson', linewidth=1.5, label='Trajectory')
-        ax.scatter(x_km[0], y_km[0], z_km[0], color='forestgreen', s=50, label='Start')
-        ax.scatter(x_km[-1], y_km[-1], z_km[-1], color='black', s=50, label='End')
-
-        # Equal aspect ratio scaling
-        max_r = np.array([x_km.max() - x_km.min(), y_km.max() - y_km.min(), z_km.max() - z_km.min()]).max() / 2.0
-        mid_x = (x_km.max() + x_km.min()) * 0.5
-        mid_y = (y_km.max() + y_km.min()) * 0.5
-        mid_z = (z_km.max() + z_km.min()) * 0.5
-        ax.set_xlim(mid_x - max_r, mid_x + max_r)
-        ax.set_ylim(mid_y - max_r, mid_y + max_r)
-        ax.set_zlim(mid_z - max_r, mid_z + max_r)
-
-        ax.set_xlabel('ECI X (km)')
-        ax.set_ylabel('ECI Y (km)')
-        ax.set_zlabel('ECI Z (km)')
-        ax.set_title(title)
-        ax.legend()
-        plt.tight_layout()
-        plt.show()
+        elif chosen_method in ("rk45", "dopri5"):
+            return rk45_adaptive(
+                derivs_func=derivs,
+                t_span=(0.0, float(t_span)),
+                y0=initial_state,
+                rtol=float(rtol),
+                atol=float(atol),
+                h_init=float(dt),
+                h_min=float(h_min),
+                h_max=float(h_max),
+            )
+        else:
+            raise ValueError(
+                f"Unsupported numerical integration method '{method}'. Choose 'rk4' or 'rk45'."
+            )

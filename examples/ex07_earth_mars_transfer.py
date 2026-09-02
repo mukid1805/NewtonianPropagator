@@ -2,8 +2,10 @@
 Scenario 7: Earth-to-Mars Interplanetary Mission Design & Flight Dynamics.
 Performs global Porkchop optimization across calendar launch windows,
 evaluates deliverable science payload capacity via core.launchers,
-extracts optimal transfer opportunities, and verifies the trajectory via RK4.
+extracts optimal transfer opportunities, and benchmarks ballistic arc
+propagation comparing Fixed-Step RK4 against Adaptive RK45 (Dormand-Prince).
 """
+import time
 import warnings
 from datetime import datetime
 import numpy as np
@@ -12,7 +14,7 @@ import matplotlib.dates as mdates
 
 from core.time import datetime_to_jd, jd_to_datetime, JD_J2000
 from core.ephemeris import get_planet_state, MU_SUN, AU
-from core.integrators import rk4_step
+from core.integrators import rk4_step, rk45_adaptive
 from core.lambert import solve_lambert
 from core.launchers import get_launcher, LaunchVehicle
 
@@ -132,33 +134,69 @@ def run():
     print(f"Max Delivered Payload Case: {payload_grid[arr_maxpay_idx, dep_maxpay_idx]:.1f} kg (Launch C3: {c3_grid[arr_maxpay_idx, dep_maxpay_idx]:.2f} km^2/s^2)")
     print("-" * 75)
 
-    # 5. Integrate Precision Transfer Arc via RK4
+    # 5. Integrate Precision Transfer Arc: RK4 vs. Adaptive RK45 Benchmark
     r_earth_dep, _ = get_planet_state('earth', opt_dep_mjd, frame='ecliptic')
     r_mars_arr, _ = get_planet_state('mars', opt_arr_mjd, frame='ecliptic')
     r_mars_dep, _ = get_planet_state('mars', opt_dep_mjd, frame='ecliptic')
     r_earth_arr, _ = get_planet_state('earth', opt_arr_mjd, frame='ecliptic')
 
     v_sc_dep, _ = solve_lambert(r_earth_dep, r_mars_arr, tof_opt_sec, MU_SUN, prograde=True)
+    initial_state = np.concatenate([r_earth_dep, v_sc_dep])
 
+    # 5A. Fixed-step RK4 Propagation (Baseline dt = 1800s)
     dt = 1800.0
-    num_steps = int(np.ceil(tof_opt_sec / dt))
+    num_steps_rk4 = int(np.ceil(tof_opt_sec / dt))
+    print(f"\n[1/2] Propagating via Fixed-Step RK4 (dt={dt/60:.0f}m, {num_steps_rk4:,} steps)...")
 
-    times = np.zeros(num_steps + 1)
-    states = np.zeros((num_steps + 1, 6))
-    states[0] = np.concatenate([r_earth_dep, v_sc_dep])
+    t0_wall = time.perf_counter()
+    states_rk4 = np.zeros((num_steps_rk4 + 1, 6))
+    states_rk4[0] = initial_state
+    curr_t = 0.0
+    curr_s = initial_state.copy()
 
-    current_time = 0.0
-    current_state = states[0].copy()
+    for i in range(num_steps_rk4):
+        h = min(dt, tof_opt_sec - curr_t)
+        curr_s = rk4_step(solar_gravity_derivs, curr_t, curr_s, h)
+        curr_t += h
+        states_rk4[i + 1] = curr_s
+    rk4_wall = time.perf_counter() - t0_wall
+    miss_km_rk4 = np.linalg.norm(states_rk4[-1, 0:3] - r_mars_arr) / 1000.0
+    print(f"      Completed in {rk4_wall:.4f} s | Mars Miss Distance: {miss_km_rk4:.2f} km")
 
-    print(f"\nPropagating {tof_grid[arr_opt_idx, dep_opt_idx]:.1f}-day trajectory via RK4 (dt={dt/60:.0f}m)...")
-    for i in range(num_steps):
-        h = min(dt, tof_opt_sec - current_time)
-        current_state = rk4_step(solar_gravity_derivs, current_time, current_state, h)
-        current_time += h
-        states[i + 1] = current_state
+    # 5B. Adaptive-step RK45 Propagation (Dormand-Prince)
+    print("\n[2/2] Propagating via Adaptive RK45 (rtol=1e-9, atol=1e-12)...")
+    t0_wall = time.perf_counter()
+    times_rk45, states_rk45 = rk45_adaptive(
+        derivs_func=solar_gravity_derivs,
+        t_span=(0.0, tof_opt_sec),
+        y0=initial_state,
+        rtol=1e-9,
+        atol=1e-12,
+        h_init=3600.0,
+        h_min=1.0,
+        h_max=86400.0 * 5.0,  # Allow up to 5-day step size during smooth cruise
+    )
+    rk45_wall = time.perf_counter() - t0_wall
+    num_steps_rk45 = len(times_rk45)
+    miss_km_rk45 = np.linalg.norm(states_rk45[-1, 0:3] - r_mars_arr) / 1000.0
+    print(f"      Completed in {rk45_wall:.4f} s ({num_steps_rk45:,} steps) | Mars Miss Distance: {miss_km_rk45:.2f} km")
 
-    miss_km = np.linalg.norm(states[-1, 0:3] - r_mars_arr)
-    print(f"Numerical Miss Distance at Arrival: {miss_km:.2f} km")
+    # Performance comparison printout
+    speedup = rk4_wall / rk45_wall if rk45_wall > 0 else 0.0
+    step_reduc = (1.0 - (num_steps_rk45 / num_steps_rk4)) * 100.0
+    print("\n" + "-" * 75)
+    print(f"{'Performance Metric':<28} | {'Fixed RK4 (dt=30m)':<20} | {'Adaptive RK45':<20}")
+    print("-" * 75)
+    print(f"{'Wall-Clock Runtime (s)':<28} | {rk4_wall:<20.4f} | {rk45_wall:<20.4f}")
+    print(f"{'Total Steps Taken':<28} | {num_steps_rk4:<20,} | {num_steps_rk45:<20,}")
+    print(f"{'Mars Arrival Miss (km)':<28} | {miss_km_rk4:<20.2f} | {miss_km_rk45:<20.2f}")
+    print("-" * 75)
+    print(f"Runtime Speedup        : {speedup:.2f}x faster")
+    print(f"Step Count Reduction   : {step_reduc:.2f}% fewer integration evaluations")
+    print("-" * 75)
+
+    # Use RK45 trajectory states for plotting
+    states = states_rk45
 
     # 6. Visualization
     dep_dt_list = [jd_to_datetime(m + JD_J2000) for m in dep_mjd_vals]
@@ -252,7 +290,7 @@ def run():
 
     ax4.plot(earth_orbit[:, 0], earth_orbit[:, 1], 'b--', alpha=0.5, label='Earth Orbit (1.0 AU)')
     ax4.plot(mars_orbit[:, 0], mars_orbit[:, 1], 'r--', alpha=0.5, label='Mars Orbit (1.52 AU)')
-    ax4.plot(sc_pos_au[:, 0], sc_pos_au[:, 1], color='forestgreen', linewidth=2.5, label='Lambert Transfer Arc')
+    ax4.plot(sc_pos_au[:, 0], sc_pos_au[:, 1], color='forestgreen', linewidth=2.5, label=f'RK45 Transfer Arc ({num_steps_rk45} pts)')
 
     ax4.scatter(0.0, 0.0, color='gold', s=200, edgecolors='black', label='Sun', zorder=5)
     ax4.scatter(r_earth_dep[0] / AU, r_earth_dep[1] / AU, color='dodgerblue', s=100, edgecolors='black', label='Earth @ Dep', zorder=5)
@@ -266,7 +304,7 @@ def run():
     ax4.set_xlabel('Heliocentric X [AU]', fontweight='bold')
     ax4.set_ylabel('Heliocentric Y [AU]', fontweight='bold')
     ax4.set_title(
-        f"Targeted Earth-Mars Transfer Orbit Arc\n"
+        f"Targeted Earth-Mars Transfer Orbit Arc (RK45)\n"
         f"Launch: {opt_dep_dt.strftime('%Y-%m-%d')} | Arrival: {opt_arr_dt.strftime('%Y-%m-%d')} | TOF: {tof_grid[arr_opt_idx, dep_opt_idx]:.1f} d\n"
         f"Delivered Science Payload ({launcher.name}): {payload_grid[arr_opt_idx, dep_opt_idx]:.1f} kg",
         fontsize=10.5,
@@ -283,3 +321,4 @@ main = run
 
 if __name__ == '__main__':
     run()
+    

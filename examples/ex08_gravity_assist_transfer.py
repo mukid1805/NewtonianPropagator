@@ -1,7 +1,8 @@
 """
 Scenario 8: Multi-Leg Interplanetary Gravity Assist Optimizer.
 Performs a 3D grid-search across Launch, Flyby, and Arrival dates to find
-the absolute minimum Delta-V Earth-Venus-Mars (EVM) trajectory.
+the absolute minimum Delta-V Earth-Venus-Mars (EVM) trajectory, and benchmarks
+Fixed-Step RK4 against Adaptive RK45 (Dormand-Prince) on both heliocentric legs.
 """
 import sys
 import time
@@ -13,7 +14,7 @@ from core.time import datetime_to_jd, jd_to_datetime, JD_J2000
 from core.ephemeris import get_planet_state, MU_SUN, AU
 from core.lambert import solve_lambert
 from core.flyby import evaluate_unpowered_flyby
-from core.integrators import rk4_step
+from core.integrators import rk4_step, rk45_adaptive
 
 
 def solar_gravity_derivs(t: float, state: np.ndarray) -> np.ndarray:
@@ -24,10 +25,10 @@ def solar_gravity_derivs(t: float, state: np.ndarray) -> np.ndarray:
     return np.concatenate([v, a])
 
 
-def propagate_leg(r0: np.ndarray, v0: np.ndarray, tof_sec: float, dt: float = 1800.0) -> np.ndarray:
-    """Propagates a heliocentric transfer leg with exact terminal boundary landing."""
+def propagate_leg_rk4(r0: np.ndarray, v0: np.ndarray, tof_sec: float, dt: float = 1800.0) -> np.ndarray:
+    """Propagates a heliocentric transfer leg via fixed-step RK4."""
     num_steps = int(np.ceil(tof_sec / dt))
-    states = np.zeros((num_steps + 1, 6))
+    states = np.zeros((num_steps + 1, 6), dtype=np.float64)
     states[0] = np.concatenate([r0, v0])
 
     curr_t = 0.0
@@ -40,6 +41,28 @@ def propagate_leg(r0: np.ndarray, v0: np.ndarray, tof_sec: float, dt: float = 18
         states[i + 1] = curr_state
 
     return states
+
+
+def propagate_leg_rk45(
+    r0: np.ndarray,
+    v0: np.ndarray,
+    tof_sec: float,
+    rtol: float = 1e-9,
+    atol: float = 1e-12
+):
+    """Propagates a heliocentric transfer leg via adaptive-step RK45 (Dormand-Prince)."""
+    initial_state = np.concatenate([r0, v0])
+    times, states = rk45_adaptive(
+        derivs_func=solar_gravity_derivs,
+        t_span=(0.0, tof_sec),
+        y0=initial_state,
+        rtol=rtol,
+        atol=atol,
+        h_init=3600.0,
+        h_min=1.0,
+        h_max=86400.0 * 5.0,  # Up to 5-day step size during smooth cruise
+    )
+    return times, states
 
 
 def optimize_evm_trajectory():
@@ -62,7 +85,6 @@ def optimize_evm_trajectory():
     total_combinations = len(dep_mjds) * len(tof1_days) * len(tof2_days)
     print(f"Search Grid Size: {total_combinations} trajectories...")
 
-    # Pre-cache Ephemerides for speed
     ephem_cache = {'earth': {}, 'venus': {}, 'mars': {}}
 
     best_cost = np.inf
@@ -87,7 +109,7 @@ def optimize_evm_trajectory():
                 v1_leg1, v2_leg1 = solve_lambert(r_earth, r_venus, t1 * 86400.0, MU_SUN, prograde=True)
             except ValueError:
                 count += len(tof2_days)
-                continue  # Skip invalid Leg 1
+                continue
 
             v_inf_dep = np.linalg.norm(v1_leg1 - v_earth)
             v_inf_venus_in = v2_leg1 - v_venus
@@ -106,19 +128,16 @@ def optimize_evm_trajectory():
                 try:
                     v1_leg2, v2_leg2 = solve_lambert(r_venus, r_mars, t2 * 86400.0, MU_SUN, prograde=True)
                 except ValueError:
-                    continue  # Skip invalid Leg 2
+                    continue
 
                 v_inf_venus_out = v1_leg2 - v_venus
                 v_inf_arr = np.linalg.norm(v2_leg2 - v_mars)
 
-                # Evaluate Venus Flyby
                 flyby_res = evaluate_unpowered_flyby(v_inf_venus_in, v_inf_venus_out, 'venus', min_altitude_km=300.0)
 
-                # We strictly require feasible flybys (altitude > 300km, dV_powered < 0.25 km/s)
                 if not flyby_res['is_feasible']:
                     continue
 
-                # Cost Function: Launch dV + Arrival dV (Since powered Venus dV is basically 0)
                 total_dv = v_inf_dep + v_inf_arr + flyby_res['dv_powered']
 
                 if total_dv < best_cost:
@@ -143,9 +162,9 @@ def optimize_evm_trajectory():
 
 
 def run():
-    print("=" * 70)
+    print("=" * 72)
     print("   AUTOMATED MULTI-LEG GRAVITY ASSIST OPTIMIZER (EARTH-VENUS-MARS)")
-    print("=" * 70)
+    print("=" * 72)
 
     # 1. Run Optimizer
     mission = optimize_evm_trajectory()
@@ -158,16 +177,16 @@ def run():
     flyby_dt = jd_to_datetime(mission['mjd_flyby'] + JD_J2000)
     arr_dt = jd_to_datetime(mission['mjd_arr'] + JD_J2000)
 
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 72)
     print("   OPTIMAL 'FREE' GRAVITY ASSIST IDENTIFIED")
-    print("=" * 70)
+    print("=" * 72)
     print(f"Earth Departure: {dep_dt.strftime('%Y-%m-%d')}")
     print(f"Venus Flyby:     {flyby_dt.strftime('%Y-%m-%d')}  (Leg 1 TOF: {mission['tof1']:.1f} d)")
     print(f"Mars Arrival:    {arr_dt.strftime('%Y-%m-%d')}  (Leg 2 TOF: {mission['tof2']:.1f} d)")
-    print("-" * 70)
+    print("-" * 72)
 
     fres = mission['flyby_res']
-    c3 = mission['v_inf_dep']**2
+    c3 = mission['v_inf_dep'] ** 2
 
     print(f"Earth Launch C3 Energy:           {c3:.2f} km^2/s^2  (v_inf = {mission['v_inf_dep']:.2f} km/s)")
     print(f"Venus Inbound v_inf:             {fres['v_inf_in_mag']:.2f} km/s")
@@ -177,20 +196,71 @@ def run():
     print(f"Venus Powered Correction dV:     {fres['dv_powered']:.3f} km/s")
     print(f"Mars Arrival v_inf:              {mission['v_inf_arr']:.2f} km/s")
     print(f"Total Mission Flight Time:       {mission['tof1'] + mission['tof2']:.1f} days")
-    print("=" * 70)
+    print("=" * 72)
 
-    # 2. Numerical RK4 Verification
-    print("\nPropagating optimized trajectory via RK4...")
-    states_leg1 = propagate_leg(mission['r_earth'], mission['v1_leg1'], mission['tof1'] * 86400.0)
-    miss_venus = np.linalg.norm(states_leg1[-1, 0:3] - mission['r_venus'])
+    # -------------------------------------------------------------------------
+    # 2. Numerical Trajectory Verification & RK4 vs. RK45 Benchmark
+    # -------------------------------------------------------------------------
+    tof1_sec = mission['tof1'] * 86400.0
+    tof2_sec = mission['tof2'] * 86400.0
+    dt_rk4 = 1800.0  # 30-minute fixed step
 
-    states_leg2 = propagate_leg(mission['r_venus'], mission['v1_leg2'], mission['tof2'] * 86400.0)
-    miss_mars = np.linalg.norm(states_leg2[-1, 0:3] - mission['r_mars'])
+    print("\n--- Numerical Verification & Integrator Benchmark ---")
 
-    print(f"Numerical Miss Distance at Venus: {miss_venus:.2f} km")
-    print(f"Numerical Miss Distance at Mars:  {miss_mars:.2f} km")
+    # Leg 1: Fixed RK4
+    t0 = time.perf_counter()
+    states_leg1_rk4 = propagate_leg_rk4(mission['r_earth'], mission['v1_leg1'], tof1_sec, dt=dt_rk4)
+    time_leg1_rk4 = time.perf_counter() - t0
+    miss_venus_rk4 = np.linalg.norm(states_leg1_rk4[-1, 0:3] - mission['r_venus']) / 1000.0
 
+    # Leg 1: Adaptive RK45
+    t0 = time.perf_counter()
+    times_leg1_rk45, states_leg1_rk45 = propagate_leg_rk45(mission['r_earth'], mission['v1_leg1'], tof1_sec)
+    time_leg1_rk45 = time.perf_counter() - t0
+    miss_venus_rk45 = np.linalg.norm(states_leg1_rk45[-1, 0:3] - mission['r_venus']) / 1000.0
+
+    # Leg 2: Fixed RK4
+    t0 = time.perf_counter()
+    states_leg2_rk4 = propagate_leg_rk4(mission['r_venus'], mission['v1_leg2'], tof2_sec, dt=dt_rk4)
+    time_leg2_rk4 = time.perf_counter() - t0
+    miss_mars_rk4 = np.linalg.norm(states_leg2_rk4[-1, 0:3] - mission['r_mars']) / 1000.0
+
+    # Leg 2: Adaptive RK45
+    t0 = time.perf_counter()
+    times_leg2_rk45, states_leg2_rk45 = propagate_leg_rk45(mission['r_venus'], mission['v1_leg2'], tof2_sec)
+    time_leg2_rk45 = time.perf_counter() - t0
+    miss_mars_rk45 = np.linalg.norm(states_leg2_rk45[-1, 0:3] - mission['r_mars']) / 1000.0
+
+    total_time_rk4 = time_leg1_rk4 + time_leg2_rk4
+    total_time_rk45 = time_leg1_rk45 + time_leg2_rk45
+    total_steps_rk4 = len(states_leg1_rk4) + len(states_leg2_rk4)
+    total_steps_rk45 = len(times_leg1_rk45) + len(times_leg2_rk45)
+    speedup = total_time_rk4 / total_time_rk45 if total_time_rk45 > 0 else 0.0
+    step_reduc = (1.0 - (total_steps_rk45 / total_steps_rk4)) * 100.0
+
+    print(f"{'Metric':<30} | {'Fixed RK4 (dt=30m)':<20} | {'Adaptive RK45':<20}")
+    print("-" * 75)
+    print(f"{'Leg 1 (Earth->Venus) Runtime':<30} | {time_leg1_rk4:<20.4f} | {time_leg1_rk45:<20.4f}")
+    print(f"{'Leg 1 Step Count':<30} | {len(states_leg1_rk4):<20,} | {len(times_leg1_rk45):<20,}")
+    print(f"{'Venus Intercept Miss (km)':<30} | {miss_venus_rk4:<20.2f} | {miss_venus_rk45:<20.2f}")
+    print("-" * 75)
+    print(f"{'Leg 2 (Venus->Mars) Runtime':<30} | {time_leg2_rk4:<20.4f} | {time_leg2_rk45:<20.4f}")
+    print(f"{'Leg 2 Step Count':<30} | {len(states_leg2_rk4):<20,} | {len(times_leg2_rk45):<20,}")
+    print(f"{'Mars Intercept Miss (km)':<30} | {miss_mars_rk4:<20.2f} | {miss_mars_rk45:<20.2f}")
+    print("-" * 75)
+    print(f"{'Total Propagation Time (s)':<30} | {total_time_rk4:<20.4f} | {total_time_rk45:<20.4f}")
+    print(f"{'Total Steps (Both Legs)':<30} | {total_steps_rk4:<20,} | {total_steps_rk45:<20,}")
+    print(f"Overall Speedup                : {speedup:.2f}x faster")
+    print(f"Step Count Reduction           : {step_reduc:.2f}% fewer evaluations")
+    print("=" * 72)
+
+    # Use RK45 states for trajectory plotting
+    states_leg1 = states_leg1_rk45
+    states_leg2 = states_leg2_rk45
+
+    # -------------------------------------------------------------------------
     # 3. Plotting Multi-Leg Transfer Trajectory
+    # -------------------------------------------------------------------------
     fig, ax = plt.subplots(figsize=(9.0, 9.0), num="Scenario 8: Optimized EVM Gravity Assist")
 
     t_orb = np.linspace(0, 700, 300)
@@ -204,8 +274,10 @@ def run():
 
     pos1_au = states_leg1[:, 0:3] / AU
     pos2_au = states_leg2[:, 0:3] / AU
-    ax.plot(pos1_au[:, 0], pos1_au[:, 1], color='darkcyan', linewidth=2.5, label='Leg 1: Earth -> Venus')
-    ax.plot(pos2_au[:, 0], pos2_au[:, 1], color='purple', linewidth=2.5, label='Leg 2: Venus -> Mars')
+    ax.plot(pos1_au[:, 0], pos1_au[:, 1], color='darkcyan', linewidth=2.5,
+            label=f'Leg 1: Earth -> Venus (RK45: {len(times_leg1_rk45)} pts)')
+    ax.plot(pos2_au[:, 0], pos2_au[:, 1], color='purple', linewidth=2.5,
+            label=f'Leg 2: Venus -> Mars (RK45: {len(times_leg2_rk45)} pts)')
 
     ax.scatter(0, 0, color='gold', s=200, edgecolors='black', label='Sun', zorder=5)
     ax.scatter(mission['r_earth'][0]/AU, mission['r_earth'][1]/AU, color='dodgerblue', s=100, edgecolors='black', label='Earth @ Launch', zorder=5)
@@ -219,7 +291,7 @@ def run():
     ax.set_ylabel('Heliocentric Y [AU]', fontweight='bold')
 
     title_str = (
-        f"Optimized Earth-Venus-Mars Gravity Assist\n"
+        f"Optimized Earth-Venus-Mars Gravity Assist (Adaptive RK45)\n"
         f"Dep: {dep_dt.strftime('%b %d, %Y')} | Flyby: {flyby_dt.strftime('%b %d, %Y')} | Arr: {arr_dt.strftime('%b %d, %Y')}\n"
         f"Powered Flyby dV: {fres['dv_powered']:.3f} km/s | Alt: {fres['h_p']:.0f} km"
     )
