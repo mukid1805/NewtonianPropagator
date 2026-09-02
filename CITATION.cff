@@ -23,5 +23,5 @@ keywords:
   - "spacecraft-trajectory"
   - "n-body-simulation"
   - "mission-design"
-version: "0.9.1"
-date-released: "2026-09-01"
+version: "1.0.0"
+date-released: "2026-09-02"
