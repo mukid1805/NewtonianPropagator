@@ -132,6 +132,9 @@ NewtonianPropagator/
 │   ├── ex06_cislunar_free_return.py         # Scenario 6: Cislunar free-return & Earth-Moon Lagrange points (CR3BP)
 │   ├── ex07_earth_mars_transfer.py          # Scenario 7: Earth-to-Mars mission design, Porkchop plot & RK45 arc
 │   └── ex08_gravity_assist_transfer.py      # Scenario 8: Automated Earth-Venus-Mars multi-leg gravity assist
+├── notebooks/
+│   ├── 01_interplanetary_mission_design.ipynb       # Jupyter Notebook 01: Lambert targeting & porkchop plots
+│   └── 02_Gravity_Assist_and_Flyby_Mechanics.ipynb  # Jupyter Notebook 02: Hyperbolic scattering & B-plane targeting
 ├── tests/
 │   ├── __init__.py
 │   ├── test_cr3bp.py                        # Lagrange equilibrium points & Jacobi constant conservation
