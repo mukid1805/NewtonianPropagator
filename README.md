@@ -144,6 +144,7 @@ NewtonianPropagator/
 │   ├── test_lambert.py                      # Validation of BVP solver boundary conditions
 │   ├── test_launchers.py                    # Empirical C3 curve decay & Tsiolkovsky multi-stage tests
 │   └── test_time.py                         # Epoch and temporal conversion assertions
+├── .gitattributes                           # Path overrides & Linguist language filtering
 ├── .gitignore                               # Git exclusion rules
 ├── CITATION.cff                             # Academic citation metadata
 ├── environment.yml                          # Conda environment definition
