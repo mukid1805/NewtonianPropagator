@@ -55,10 +55,10 @@ A high-fidelity, modular astrodynamics simulation suite written in Python. It su
 
 The [`notebooks/`](./notebooks) directory contains hands-on mission design tutorials and trajectory simulations. Run them directly in your browser with zero local setup:
 
-| Notebook | Focus Area | Launch Runtime |
-| :--- | :--- | :---: |
-| **01: Interplanetary Mission Design** | Lambert targeting, Earth-Mars porkchop plots, launcher $C_3$ matching | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mukid1805/NewtonianPropagator/blob/main/notebooks/01_interplanetary_mission_design.ipynb) |
-| **02: Gravity Assist & Flyby Mechanics** | Hyperbolic turning angles, $B$-plane scattering, post-encounter heliocentric energy | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mukid1805/NewtonianPropagator/blob/main/notebooks/02_Gravity_Assist_and_Flyby_Mechanics.ipynb) |
+| Notebook | Focus Area |                                                                                                    Launch Runtime                                                                                                    |
+| :--- | :--- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| **01: Interplanetary Mission Design** | Lambert targeting, Earth-Mars porkchop plots, launcher $C_3$ matching |   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mukid1805/NewtonianPropagator/blob/main/notebooks/01_interplanetary_mission_design.ipynb)    |
+| **02: Gravity Assist & Flyby Mechanics** | Hyperbolic turning angles, $B$-plane scattering, post-encounter heliocentric energy | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mukid1805/NewtonianPropagator/blob/main/notebooks/02_gravity_assist_and_flyby_mechanics.ipynb) |
 ---
 ## Numerical Performance & Benchmark Telemetry
 
