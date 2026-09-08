@@ -8,6 +8,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Last Commit](https://img.shields.io/github/last-commit/mukid1805/NewtonianPropagator?logo=github)](https://github.com/mukid1805/NewtonianPropagator/commits/main/)
 
+[Quickstart Guide](QUICKSTART.md) • [References & Reading Guide](REFERENCES.md) • [Interactive Notebooks](#interactive-notebooks) • [Architecture](#repository-architecture)
 
 ---
 
@@ -142,7 +143,7 @@ NewtonianPropagator/
 │   └── ex08_gravity_assist_transfer.py      # Scenario 8: Automated Earth-Venus-Mars multi-leg gravity assist
 ├── notebooks/
 │   ├── 01_interplanetary_mission_design.ipynb       # Jupyter Notebook 01: Lambert targeting & porkchop plots
-│   └── 02_Gravity_Assist_and_Flyby_Mechanics.ipynb  # Jupyter Notebook 02: Hyperbolic scattering & B-plane targeting
+│   └── 02_gravity_assist_and_flyby_mechanics.ipynb  # Jupyter Notebook 02: Hyperbolic scattering & B-plane targeting
 ├── tests/
 │   ├── __init__.py
 │   ├── test_cr3bp.py                        # Lagrange equilibrium points & Jacobi constant conservation
@@ -160,6 +161,7 @@ NewtonianPropagator/
 ├── pyproject.toml                           # PEP 517/621 package configuration
 ├── QUICKSTART.md                            # Rapid deployment instructions
 ├── README.md                                # Project documentation and engineering guide
+├── REFERENCES.md                            # Theoretical foundations, citations, and literature guide
 └── requirements.txt                         # Pip package dependencies
 
 ```
