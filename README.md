@@ -8,7 +8,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Last Commit](https://img.shields.io/github/last-commit/mukid1805/NewtonianPropagator?logo=github)](https://github.com/mukid1805/NewtonianPropagator/commits/main/)
 
-[Quickstart Guide](QUICKSTART.md) • [References & Reading Guide](REFERENCES.md) • [Interactive Notebooks](#interactive-notebooks) • [Architecture](#repository-architecture)
+[Quickstart Guide](QUICKSTART.md) • [References & Reading Guide](REFERENCES.md) • [Interactive Notebooks](#interactive-notebooks) • [Architecture](#repository-architecture) • [System Workflow](#system-architecture--computational-workflow)
 
 ---
 
@@ -164,5 +164,105 @@ NewtonianPropagator/
 ├── REFERENCES.md                            # Theoretical foundations, citations, and literature guide
 └── requirements.txt                         # Pip package dependencies
 
+```
+---
+
+## System Architecture & Computational Workflow
+```mermaid
+flowchart TD
+    %% Global Styling
+    classDef input fill:#1e293b,stroke:#38bdf8,stroke-width:1.5px,color:#f8fafc;
+    classDef core fill:#0f172a,stroke:#818cf8,stroke-width:1.5px,color:#f8fafc;
+    classDef force fill:#1e1b4b,stroke:#c084fc,stroke-width:1.5px,color:#f8fafc;
+    classDef solver fill:#064e3b,stroke:#34d399,stroke-width:1.5px,color:#f8fafc;
+    classDef app fill:#701a75,stroke:#f472b6,stroke-width:1.5px,color:#f8fafc;
+    classDef output fill:#451a03,stroke:#fb923c,stroke-width:1.5px,color:#f8fafc;
+
+    %% 1. Input Layer
+    subgraph Inputs ["1. Mission Configuration & Initial State"]
+        IN_STATE["Initial State [r₀, v₀] & Epoch (MJD/JD)"]:::input
+        IN_BODY["Spacecraft Specs: Mass m, Area A, C_d, C_r"]:::input
+        IN_CONST["Planetary & Physical Constants (constants.py)"]:::input
+    end
+
+    %% 2. Ephemeris & Frame Resolution
+    subgraph EphemerisLayer ["2. Ephemeris & Frame Transformations"]
+        EPH["Analytical Planetary Ephemeris (ephemeris.py)<br/>Standish / JPL Secular Elements (1800-2050)"]:::core
+        FRAME["Frame Conversions<br/>Ecliptic ↔ ICRF/J2000 Equatorial (ε₀ = 23.439°)"]:::core
+    end
+
+    %% 3. Superposition Dynamics
+    subgraph DynamicsLayer ["3. Acceleration Superposition Junction (forces.py)"]
+        F_GRAV["Two-Body Central Gravity<br/>-μ / r³ · r"]:::force
+        F_J2["Geopotential Zonal Harmonics<br/>J2, J3, J4 Perturbations"]:::force
+        F_DRAG["Diurnal Exponential Drag<br/>Coupled Earth Rotation (ω_E)"]:::force
+        F_SRP["Solar Radiation Pressure (SRP)<br/>Cylindrical Umbral Shadow"]:::force
+        F_3RD["Third-Body Gravity<br/>Lunar / Solar Point-Masses"]:::force
+        F_THRUST["Low-Thrust Electric Propulsion<br/>dm/dt = -T / (g₀ · I_sp)"]:::force
+        SUM["Superposition Junction<br/>a_net = a_grav + a_J + a_drag + a_srp + a_3rd + a_thrust"]:::force
+    end
+
+    %% 4. Numerical Integration Core
+    subgraph IntegratorLayer ["4. Numerical Integration Core (propagator.py)"]
+        DIFF_EQ["Derivative Evaluation<br/>dx/dt = [v, a_net, dm/dt]ᵀ"]:::solver
+        subgraph Solvers ["Integrators"]
+            RK4["Deterministic Solver<br/>Fixed-Step 4th-Order Runge-Kutta"]:::solver
+            RK45["Adaptive Dormand-Prince (RK45)<br/>LTE Step Control & FSAL Efficiency"]:::solver
+        end
+        CONSERV["Conservation Monitors<br/>Specific Energy Drift | Jacobi Constant Drift"]:::solver
+    end
+
+    %% 5. Downstream Mission Applications
+    subgraph ApplicationLayer ["5. Astrodynamic Mission Engines"]
+        LAMBERT["Lambert Targeter (lambert.py)<br/>Universal Variable Boundary Solver"]:::app
+        PORKCHOP["Interplanetary Mission Design<br/>Porkchop Plots & C3 Injection Sizing"]:::app
+        FLYBY["Patched-Conic Gravity Assist (flyby.py)<br/>Hyperbolic Turn-Angle Matching (Earth-Venus-Mars)"]:::app
+        CR3BP["Cislunar 3-Body Dynamics (cr3bp.py)<br/>Synodic Rotating Frame & L1-L5 Solvers"]:::app
+        SWARM["Relative Swarm Dynamics (swarm.py)<br/>ECI ↔ Curvilinear LVLH / Hill Frame"]:::app
+    end
+
+    %% 6. Outputs & Results
+    subgraph OutputLayer ["6. Outputs & Visualizations"]
+        OUT_TRAJ["Propagated Ephemerides & State Histories"]:::output
+        OUT_PLOTS["Interactive Visualizations<br/>3D Orbits, Ground Tracks, Porkchop Plots"]:::output
+        OUT_BUDGET["Flight Optimization Deliverables<br/>Mission Δv Budget & Launch C3 Capacities"]:::output
+    end
+
+    %% Connections
+    IN_CONST --> EPH
+    IN_CONST --> DynamicsLayer
+    IN_BODY --> DynamicsLayer
+
+    EPH --> FRAME
+    FRAME --> F_3RD
+    FRAME --> LAMBERT
+
+    F_GRAV --> SUM
+    F_J2 --> SUM
+    F_DRAG --> SUM
+    F_SRP --> SUM
+    F_3RD --> SUM
+    F_THRUST --> SUM
+
+    SUM --> DIFF_EQ
+    IN_STATE --> RK4
+    IN_STATE --> RK45
+    DIFF_EQ --> RK4
+    DIFF_EQ --> RK45
+    RK45 --> CONSERV
+
+    LAMBERT --> PORKCHOP
+    PORKCHOP --> FLYBY
+    LAMBERT -. Initial State / Transfer .-> IN_STATE
+
+    RK45 --> CR3BP
+    RK45 --> SWARM
+
+    RK4 --> OUT_TRAJ
+    RK45 --> OUT_TRAJ
+    FLYBY --> OUT_BUDGET
+    PORKCHOP --> OUT_PLOTS
+    CR3BP --> OUT_PLOTS
+    SWARM --> OUT_PLOTS
 ```
 ---
