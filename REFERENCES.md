@@ -10,6 +10,7 @@ This document outlines the foundational literature, theoretical background, and 
 2. **Lambert’s Problem:** Handled in `core/lambert.py` to determine the Keplerian orbit connecting two position vectors over a specified time-of-flight, commonly used for impulsive orbital transfers and targeting.
 3. **Orbital Perturbations:** Modeled in `core/forces.py`, accounting for non-spherical gravitational harmonics (such as $J_2$, $J_3$, and $J_4$), atmospheric drag, and Solar Radiation Pressure (SRP).
 4. **Coordinate Frames & Formations:** Relative motion dynamics and satellite swarms in `core/swarm.py` are formulated using the Local-Vertical/Local-Horizontal (LVLH) frame.
+5. **Analytical Planetary Ephemeris:** Implemented in `core/ephemeris.py` using Standish's secular variations of Keplerian elements (1800-2050). The module evaluates osculating elements at Julian epoch $T$, solves Kepler’s equation for eccentric anomaly $E$, and constructs 3D Cartesian state vectors rotated into heliocentric ecliptic or ICRF/J2000 equatorial frames via Earth's mean obliquity ($\epsilon_0 = 23.4392811^\circ$).
 
 ---
 
@@ -25,6 +26,10 @@ This document outlines the foundational literature, theoretical background, and 
   * *Focus:* Standard implementations of ephemeris time frames, coordinate conversions, and environmental perturbations (drag, solar pressure, and zonal harmonics).
 * **Szebehely, V.** (1967). *Theory of Orbits: The Restricted Problem of Three Bodies*. Academic Press.
   * *Focus:* Mathematical formulation of the Circular Restricted Three-Body Problem (CR3BP), equilibrium Lagrange points, and Jacobi energy conservation.
+* **Standish, E. M.** (1992). *Keplerian Elements for Approximate Positions of the Major Planets*. NASA Jet Propulsion Laboratory (JPL) Solar System Dynamics Group. https://ssd.jpl.nasa.gov/planets/approx_pos.html
+  * *Focus:* Mathematical source of the reference Keplerian elements ($a, e, i, \Omega, \varpi, L$) and secular variation rates per Julian century at J2000 implemented in `core/ephemeris.py`.
+* **NASA Jet Propulsion Laboratory (JPL) Solar System Dynamics Group.** (2026). *Planetary Physical Parameters and Constants*. NASA SSD. https://ssd.jpl.nasa.gov/planets/phys_par.html
+  * *Focus:* Planetary gravitational parameters ($\mu = GM$), volumetric mean radii, mass ratios, and astronomical unit ($AU$) constants defined in `core/constants.py` and `core/ephemeris.py`.
 
 ---
 
