@@ -1,0 +1,72 @@
+/* 1. Expand the overall page width to make room for a wider TOC */
+.md-grid {
+  max-width: 84rem;
+}
+
+/* 2. Widen the sidebar and FORCE it to stay pinned to the top */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--secondary {
+    width: 20rem !important;
+    position: sticky !important;
+    top: 4rem !important;                  /* Distance from the top of the screen */
+    height: calc(100vh - 4rem) !important; /* Prevents vertical overflow */
+  }
+}
+
+/* 3. Hide horizontal scroll ONLY inside the TOC wrapper (Never on html/body) */
+.md-sidebar--secondary .md-sidebar__scrollwrap {
+  overflow-x: hidden !important;
+}
+
+/* 4. Base TOC Container */
+.md-nav--secondary {
+  border-left: 2px solid rgba(120, 130, 200, 0.2);
+  padding-left: 0.5rem;
+}
+
+/* 5. STRICT SINGLE-LINE RULE: No wrapping, clean ellipsis on overflow */
+.md-nav--secondary .md-nav__link {
+  display: block !important;
+  white-space: nowrap !important;       /* Forces single line */
+  overflow: hidden !important;          /* Hides any overflow */
+  text-overflow: ellipsis !important;   /* Adds '...' if text is too long */
+  font-size: 0.82rem;
+  font-weight: 400;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 2px 0;
+  transition: all 0.15s ease-in-out;
+}
+
+/* 6. Category Headers (H2) */
+.md-nav--secondary > ul > .md-nav__item > .md-nav__link {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--md-default-fg-color--light);
+  margin-top: 1rem;
+}
+
+/* 7. Hover State */
+.md-nav--secondary .md-nav__link:hover {
+  background-color: rgba(99, 102, 241, 0.08);
+  color: var(--md-accent-fg-color);
+}
+
+/* 8. Active State */
+.md-nav--secondary .md-nav__link--active {
+  font-weight: 600;
+  color: var(--md-accent-fg-color) !important;
+  background-color: rgba(99, 102, 241, 0.12);
+  border-left: 3px solid var(--md-accent-fg-color);
+}
+
+/* 9. Bottom clearance for scroll tracker */
+.md-content {
+  padding-bottom: 50vh;
+}
+
+:root {
+  --md-toc-width: 80rem; /* Adjust this value: try 18rem, 20rem, 22rem */
+}
