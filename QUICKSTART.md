@@ -177,3 +177,8 @@ Query all supported rocket performance curves directly from the terminal:
 python -c "from core import list_available_launchers; print('\n'.join(x['name'] for x in list_available_launchers()))"
 ```
 ---
+
+## Next Steps & API Documentation
+For exhaustive function signatures, mathematical formulations and argument definitions across all modules (`forces`, `propagator`, `lambert`, `cr3bp`, etc.), visit the hosted **[NewtonianPropagator API Reference](https://mukid1805.github.io/NewtonianPropagator/)**.
+
+---

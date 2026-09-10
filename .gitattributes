@@ -1,13 +1,25 @@
 # Normalize line endings
 * text=auto
 
-# Exclude notebooks from Linguist language statistics (root and subdirectories)
+# Exclude notebooks from Linguist language statistics
 *.ipynb linguist-detectable=false
 *.ipynb linguist-documentation=true
 **/*.ipynb linguist-detectable=false
 **/*.ipynb linguist-documentation=true
-notebooks/* linguist-documentation=true
-notebooks/* linguist-detectable=false
+notebooks/** linguist-documentation=true
+notebooks/** linguist-detectable=false
+
+# Exclude CSS and JS documentation assets from language stats
+*.css linguist-detectable=false
+*.css linguist-documentation=true
+**/*.css linguist-detectable=false
+**/*.css linguist-documentation=true
+*.js linguist-detectable=false
+*.js linguist-documentation=true
+**/*.js linguist-detectable=false
+**/*.js linguist-documentation=true
+docs/** linguist-documentation=true
+docs/** linguist-detectable=false
 
 # Auto-generated code
 core/_version.py linguist-generated=true

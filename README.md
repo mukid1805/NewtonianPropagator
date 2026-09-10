@@ -7,6 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/mukid1805/NewtonianPropagator?include_prereleases&color=blue&logo=github)](https://github.com/mukid1805/NewtonianPropagator/releases)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Last Commit](https://img.shields.io/github/last-commit/mukid1805/NewtonianPropagator?logo=github)](https://github.com/mukid1805/NewtonianPropagator/commits/main/)
+[![API Docs](https://img.shields.io/badge/API_Docs-GitHub_Pages-181717?style=flat&logo=github&logoColor=white)](https://mukid1805.github.io/NewtonianPropagator/)
 
 [Quickstart Guide](QUICKSTART.md) • [References & Reading Guide](REFERENCES.md) • [Interactive Notebooks](#interactive-notebooks) • [Architecture](#repository-architecture) • [System Workflow](#system-architecture--computational-workflow)
 
@@ -56,9 +57,9 @@ A high-fidelity, modular astrodynamics simulation suite written in Python. It su
 
 The [`notebooks/`](./notebooks) directory contains hands-on mission design tutorials and trajectory simulations. Run them directly in your browser with zero local setup:
 
-| Notebook | Focus Area |                                                                                                    Launch Runtime                                                                                                    |
-| :--- | :--- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| **01: Interplanetary Mission Design** | Lambert targeting, Earth-Mars porkchop plots, launcher $C_3$ matching |   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mukid1805/NewtonianPropagator/blob/main/notebooks/01_interplanetary_mission_design.ipynb)    |
+| Notebook                                 | Focus Area                                                                          |                                                                                                    Launch Runtime                                                                                                    |
+|:-----------------------------------------|:------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| **01: Interplanetary Mission Design**    | Lambert targeting, Earth-Mars porkchop plots, launcher $C_3$ matching               |   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mukid1805/NewtonianPropagator/blob/main/notebooks/01_interplanetary_mission_design.ipynb)    |
 | **02: Gravity Assist & Flyby Mechanics** | Hyperbolic turning angles, $B$-plane scattering, post-encounter heliocentric energy | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mukid1805/NewtonianPropagator/blob/main/notebooks/02_gravity_assist_and_flyby_mechanics.ipynb) |
 ---
 ## Numerical Performance & Benchmark Telemetry
@@ -111,6 +112,7 @@ $$\sin\left(\frac{\delta}{2}\right) = \frac{1}{1 + \frac{r_p v_\infty^2}{\mu_p}}
 NewtonianPropagator/
 ├── .github/
 │   └── workflows/
+│       ├── docs.yml                         # Automated MkDocs deployment to GitHub Pages
 │       ├── tests.yml                        # Automated multi-OS CI test pipeline
 │       └── update-citation.yml              # Automated CITATION.cff tag sync workflow
 ├── core/
@@ -131,6 +133,12 @@ NewtonianPropagator/
 │   ├── __init__.py
 │   ├── template_custom_orbit.py             # Parametric sandbox for custom orbital propagation
 │   └── template_interplanetary_mission.py   # Starter template for Lambert targeting & launch sizing
+├── docs/
+│   ├── index.md                             # Automated MkDocs Core API Reference landing page
+│   ├── javascripts/
+│   │   └── mathjax.js                       # MathJax configuration & math typesetting integration
+│   └── stylesheets/
+│       └── extra.css                        # Custom typography, layout overrides & sticky TOC styling
 ├── examples/
 │   ├── __init__.py
 │   ├── ex01_lunar_impulsive_transfer.py     # Scenario 1: Lunar 3rd-body perturbation & impulsive burn
@@ -158,12 +166,12 @@ NewtonianPropagator/
 ├── CITATION.cff                             # Academic citation metadata
 ├── environment.yml                          # Conda environment definition
 ├── main.py                                  # Interactive CLI demonstration launcher
+├── mkdocs.yml                               # MkDocs configuration & Material theme settings
 ├── pyproject.toml                           # PEP 517/621 package configuration
 ├── QUICKSTART.md                            # Rapid deployment instructions
 ├── README.md                                # Project documentation and engineering guide
 ├── REFERENCES.md                            # Theoretical foundations, citations, and literature guide
 └── requirements.txt                         # Pip package dependencies
-
 ```
 ---
 

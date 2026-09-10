@@ -1,21 +1,55 @@
-"""
+r"""
 Acceleration models for the Newtonian superposition summation junction.
-All functions accept position vectors r [m] and velocity vectors v [m/s] in ECI coordinates.
+
+All acceleration models operate in the Earth-Centered Inertial (ECI) coordinate
+frame with position vectors $\mathbf{r} \in \mathbb{R}^3\text{ [m]}$ and velocity
+vectors $\mathbf{v} \in \mathbb{R}^3\text{ [m/s]}$.
 """
+
 import numpy as np
 from core.constants import (
     G_EARTH, G_MOON, R_EARTH, J2_EARTH, J3_EARTH, J4_EARTH, OMEGA_EARTH,
     RHO_0, SCALE_HEIGHT, R_MOON_ORBIT, OMEGA_MOON, AU, P_SUN_1AU
 )
 
+
 def accel_earth_gravity(r: np.ndarray) -> np.ndarray:
-    """Primary central body Newtonian gravitational acceleration: a = -GM/r^3 * r."""
+    r"""
+    Primary central-body Newtonian point-mass gravitational acceleration.
+
+    $$
+    \mathbf{a}_{\text{grav}} = -\frac{\mu_{\oplus}}{\|\mathbf{r}\|^3} \mathbf{r}
+    $$
+
+    Args:
+        r (np.ndarray): Spacecraft position vector $\mathbf{r}$ in ECI frame [m].
+
+    Returns:
+        np.ndarray: Gravitational acceleration vector $\mathbf{a}_{\text{grav}}$ [$\text{m/s}^2$].
+    """
     r_mag = np.linalg.norm(r)
     return -G_EARTH * r / (r_mag ** 3)
 
 
 def accel_j2_perturbation(r: np.ndarray) -> np.ndarray:
-    """Nonspherical Earth geopotential J2 harmonic perturbation."""
+    r"""
+    Nonspherical Earth geopotential $J_2$ zonal harmonic perturbation (Earth oblateness).
+
+    $$
+    \mathbf{a}_{J_2} = \frac{3 J_2 \mu_{\oplus} R_{\oplus}^2}{2 \|\mathbf{r}\|^5}
+    \begin{bmatrix}
+    x \left(5 \frac{z^2}{\|\mathbf{r}\|^2} - 1\right) \\
+    y \left(5 \frac{z^2}{\|\mathbf{r}\|^2} - 1\right) \\
+    z \left(5 \frac{z^2}{\|\mathbf{r}\|^2} - 3\right)
+    \end{bmatrix}
+    $$
+
+    Args:
+        r (np.ndarray): Spacecraft position vector $\mathbf{r} = [x, y, z]^T$ in ECI frame [m].
+
+    Returns:
+        np.ndarray: Perturbation acceleration vector $\mathbf{a}_{J_2}$ [$\text{m/s}^2$].
+    """
     x, y, z = r
     r_mag = np.linalg.norm(r)
     factor = 1.5 * J2_EARTH * G_EARTH * (R_EARTH ** 2) / (r_mag ** 5)
@@ -26,11 +60,31 @@ def accel_j2_perturbation(r: np.ndarray) -> np.ndarray:
         z * (5.0 * z_sq - 3.0)
     ])
 
+
 def accel_j3_perturbation(r: np.ndarray) -> np.ndarray:
-    """Nonspherical Earth geopotential J3 harmonic perturbation (pear shape)."""
+    r"""
+    Nonspherical Earth geopotential $J_3$ zonal harmonic perturbation (pear-shape asymmetry).
+
+    With $s = \sin\phi = \frac{z}{\|\mathbf{r}\|}$:
+
+    $$
+    \mathbf{a}_{J_3} = \frac{1}{2} \frac{J_3 \mu_{\oplus} R_{\oplus}^3}{\|\mathbf{r}\|^5}
+    \begin{bmatrix}
+    5 x \left(7s^3 - 3s\right) \\
+    5 y \left(7s^3 - 3s\right) \\
+    \|\mathbf{r}\| \left(35s^4 - 30s^2 + 3\right)
+    \end{bmatrix}
+    $$
+
+    Args:
+        r (np.ndarray): Spacecraft position vector $\mathbf{r} = [x, y, z]^T$ in ECI frame [m].
+
+    Returns:
+        np.ndarray: Perturbation acceleration vector $\mathbf{a}_{J_3}$ [$\text{m/s}^2$].
+    """
     x, y, z = r
     r_mag = np.linalg.norm(r)
-    s = z / r_mag  # sin(phi)
+    s = z / r_mag
 
     factor = 0.5 * J3_EARTH * G_EARTH * (R_EARTH ** 3) / (r_mag ** 5)
 
@@ -42,7 +96,26 @@ def accel_j3_perturbation(r: np.ndarray) -> np.ndarray:
 
 
 def accel_j4_perturbation(r: np.ndarray) -> np.ndarray:
-    """Nonspherical Earth geopotential J4 harmonic perturbation."""
+    r"""
+    Nonspherical Earth geopotential $J_4$ zonal harmonic perturbation.
+
+    With $s = \sin\phi = \frac{z}{\|\mathbf{r}\|}$:
+
+    $$
+    \mathbf{a}_{J_4} = \frac{5}{8} \frac{J_4 \mu_{\oplus} R_{\oplus}^4}{\|\mathbf{r}\|^6}
+    \begin{bmatrix}
+    x \left(3 - 42s^2 + 63s^4\right) \\
+    y \left(3 - 42s^2 + 63s^4\right) \\
+    z \left(15 - 70s^2 + 63s^4\right)
+    \end{bmatrix}
+    $$
+
+    Args:
+        r (np.ndarray): Spacecraft position vector $\mathbf{r} = [x, y, z]^T$ in ECI frame [m].
+
+    Returns:
+        np.ndarray: Perturbation acceleration vector $\mathbf{a}_{J_4}$ [$\text{m/s}^2$].
+    """
     x, y, z = r
     r_mag = np.linalg.norm(r)
     s = z / r_mag
@@ -60,10 +133,31 @@ def accel_j4_perturbation(r: np.ndarray) -> np.ndarray:
 
 
 def rv_to_keplerian(r: np.ndarray, v: np.ndarray, mu: float = G_EARTH) -> dict:
-    """
-    Converts Cartesian state (r, v) to Classical Orbital Elements (COE):
-    returns: a (semi-major axis), e (eccentricity), inc (inclination),
-             raan (RAAN), argp (argument of perigee), nu (true anomaly).
+    r"""
+    Converts Cartesian state vectors $(\mathbf{r}, \mathbf{v})$ to Classical Orbital Elements (COE).
+
+    Computes specific orbital energy $\varepsilon$, specific angular momentum vector $\mathbf{h}$,
+    and eccentricity vector $\mathbf{e}$:
+
+    $$
+    \varepsilon = \frac{\|\mathbf{v}\|^2}{2} - \frac{\mu}{\|\mathbf{r}\|}, \quad
+    a = -\frac{\mu}{2\varepsilon}, \quad
+    \mathbf{h} = \mathbf{r} \times \mathbf{v}, \quad
+    \mathbf{e} = \frac{1}{\mu} \left[\left(\|\mathbf{v}\|^2 - \frac{\mu}{\|\mathbf{r}\|}\right)\mathbf{r} - (\mathbf{r} \cdot \mathbf{v})\mathbf{v}\right]
+    $$
+
+    Args:
+        r (np.ndarray): Position vector $\mathbf{r}$ in ECI frame [m].
+        v (np.ndarray): Velocity vector $\mathbf{v}$ in ECI frame [m/s].
+        mu (float, optional): Standard gravitational parameter $\mu$ [$\text{m}^3/\text{s}^2$]. Defaults to Earth ($G_{\text{EARTH}}$).
+
+    Returns:
+        dict: Classical orbital elements:
+            - `a` (float): Semi-major axis $a$ [m].
+            - `e` (float): Eccentricity $e$ [dimensionless].
+            - `inc_deg` (float): Inclination $i$ [deg].
+            - `raan_deg` (float): Right Ascension of Ascending Node $\Omega$ [deg].
+            - `argp_deg` (float): Argument of Perigee $\omega$ [deg].
     """
     r_mag = np.linalg.norm(r)
     v_mag = np.linalg.norm(v)
@@ -71,23 +165,18 @@ def rv_to_keplerian(r: np.ndarray, v: np.ndarray, mu: float = G_EARTH) -> dict:
     h_vec = np.cross(r, v)
     h_mag = np.linalg.norm(h_vec)
 
-    # Specific mechanical energy
     energy = 0.5 * (v_mag ** 2) - (mu / r_mag)
     a = -mu / (2.0 * energy) if abs(energy) > 1e-12 else np.nan
 
-    # Eccentricity vector
     e_vec = (1.0 / mu) * ((v_mag ** 2 - mu / r_mag) * r - np.dot(r, v) * v)
     e = np.linalg.norm(e_vec)
 
-    # Inclination
     inc = np.arccos(np.clip(h_vec[2] / h_mag, -1.0, 1.0))
 
-    # Node vector
     k_hat = np.array([0.0, 0.0, 1.0])
     n_vec = np.cross(k_hat, h_vec)
     n_mag = np.linalg.norm(n_vec)
 
-    # RAAN (Omega)
     if n_mag > 1e-9:
         raan = np.arccos(np.clip(n_vec[0] / n_mag, -1.0, 1.0))
         if n_vec[1] < 0:
@@ -95,7 +184,6 @@ def rv_to_keplerian(r: np.ndarray, v: np.ndarray, mu: float = G_EARTH) -> dict:
     else:
         raan = 0.0
 
-    # Argument of Perigee (omega)
     if n_mag > 1e-9 and e > 1e-6:
         argp = np.arccos(np.clip(np.dot(n_vec, e_vec) / (n_mag * e), -1.0, 1.0))
         if e_vec[2] < 0:
@@ -111,8 +199,22 @@ def rv_to_keplerian(r: np.ndarray, v: np.ndarray, mu: float = G_EARTH) -> dict:
         "argp_deg": np.degrees(argp)
     }
 
+
 def accel_lunar_gravity(r: np.ndarray, t: float) -> np.ndarray:
-    """Third-body lunar gravitational attraction (direct minus indirect acceleration)."""
+    r"""
+    Third-body lunar gravitational perturbation accounting for direct and indirect acceleration.
+
+    $$
+    \mathbf{a}_{3\text{rd}} = \mu_{\text{moon}} \left( \frac{\mathbf{r}_{\text{moon}} - \mathbf{r}}{\|\mathbf{r}_{\text{moon}} - \mathbf{r}\|^3} - \frac{\mathbf{r}_{\text{moon}}}{\|\mathbf{r}_{\text{moon}}\|^3} \right)
+    $$
+
+    Args:
+        r (np.ndarray): Spacecraft position vector $\mathbf{r}$ in ECI frame [m].
+        t (float): Elapsed simulation epoch time $t$ [s].
+
+    Returns:
+        np.ndarray: Third-body lunar acceleration vector $\mathbf{a}_{3\text{rd}}$ [$\text{m/s}^2$].
+    """
     r_moon = np.array([
         R_MOON_ORBIT * np.cos(OMEGA_MOON * t),
         R_MOON_ORBIT * np.sin(OMEGA_MOON * t),
@@ -123,13 +225,31 @@ def accel_lunar_gravity(r: np.ndarray, t: float) -> np.ndarray:
 
 
 def accel_atmospheric_drag(r: np.ndarray, v: np.ndarray, cd: float, area: float, mass: float) -> np.ndarray:
-    """
-    Atmospheric drag accounting for Earth rotation and exponential density decay:
-    a_drag = -0.5 * rho * (Cd * A / m) * |v_rel| * v_rel
+    r"""
+    Atmospheric drag acceleration accounting for Earth rotation and exponential density decay.
+
+    $$
+    \rho(h) = \rho_0 \exp\left(-\frac{h}{H}\right), \quad
+    \mathbf{v}_{\text{rel}} = \mathbf{v} - \mathbf{\omega}_{\oplus} \times \mathbf{r}
+    $$
+
+    $$
+    \mathbf{a}_{\text{drag}} = -\frac{1}{2} \rho \left( \frac{C_d A}{m} \right) \|\mathbf{v}_{\text{rel}}\| \mathbf{v}_{\text{rel}}
+    $$
+
+    Args:
+        r (np.ndarray): Spacecraft position vector $\mathbf{r}$ in ECI frame [m].
+        v (np.ndarray): Spacecraft inertial velocity vector $\mathbf{v}$ in ECI frame [m/s].
+        cd (float): Drag coefficient $C_d$ [dimensionless].
+        area (float): Frontal cross-sectional aerodynamic area $A$ [$\text{m}^2$].
+        mass (float): Instantaneous spacecraft mass $m$ [kg].
+
+    Returns:
+        np.ndarray: Drag acceleration vector $\mathbf{a}_{\text{drag}}$ [$\text{m/s}^2$].
     """
     altitude = np.linalg.norm(r) - R_EARTH
     if altitude < 0:
-        return np.array([0.0, 0.0, 0.0])  # Spacecraft has impacted Earth surface
+        return np.array([0.0, 0.0, 0.0])
 
     rho = RHO_0 * np.exp(-altitude / SCALE_HEIGHT)
     omega_vec = np.array([0.0, 0.0, OMEGA_EARTH])
@@ -140,29 +260,77 @@ def accel_atmospheric_drag(r: np.ndarray, v: np.ndarray, cd: float, area: float,
 
 
 def accel_solar_radiation_pressure(r: np.ndarray, cr: float, area: float, mass: float) -> np.ndarray:
-    """
-    Cannonball Solar Radiation Pressure (SRP) with cylindrical Earth shadow eclipse check.
+    r"""
+    Cannonball Solar Radiation Pressure (SRP) perturbation with cylindrical Earth shadow eclipse check.
+
+    $$
+    \mathbf{a}_{\text{srp}} = \nu P_{\text{sun}} C_r \left(\frac{A}{m}\right) \frac{\mathbf{r}_{\text{sc}} - \mathbf{r}_{\odot}}{\|\mathbf{r}_{\text{sc}} - \mathbf{r}_{\odot}\|}
+    $$
+
+    where $\nu = 0$ when inside Earth cylindrical umbra ($x < 0$ and $\sqrt{y^2 + z^2} < R_{\oplus}$), and $\nu = 1$ in direct sunlight.
+
+    Args:
+        r (np.ndarray): Spacecraft position vector $\mathbf{r}$ in ECI frame [m].
+        cr (float): Radiation pressure coefficient $C_r$ [dimensionless].
+        area (float): Solar exposed cross-sectional area $A$ [$\text{m}^2$].
+        mass (float): Instantaneous spacecraft mass $m$ [kg].
+
+    Returns:
+        np.ndarray: SRP acceleration vector $\mathbf{a}_{\text{srp}}$ [$\text{m/s}^2$].
     """
     r_sun = np.array([AU, 0.0, 0.0])
     r_sc_sun = r - r_sun
     sun_dir = r_sc_sun / np.linalg.norm(r_sc_sun)
 
-    # Cylindrical Earth shadow check
     if r[0] < 0 and np.linalg.norm(r[1:3]) < R_EARTH:
-        return np.array([0.0, 0.0, 0.0])  # Umbra
+        return np.array([0.0, 0.0, 0.0])
 
     return P_SUN_1AU * cr * (area / mass) * sun_dir
 
 
 def accel_fixed_thrust(t: float, start_t: float, duration: float, thrust_vec: np.ndarray, mass: float) -> np.ndarray:
-    """Impulsive or constant timed directional thrust vector."""
+    r"""
+    Constant directional thrust acceleration over a fixed time duration.
+
+    $$
+    \mathbf{a}_{\text{thrust}} =
+    \begin{cases}
+    \frac{\mathbf{F}_{\text{thrust}}}{m}, & t_{\text{start}} \le t \le t_{\text{start}} + \Delta t \\
+    \mathbf{0}, & \text{otherwise}
+    \end{cases}
+    $$
+
+    Args:
+        t (float): Current simulation epoch time $t$ [s].
+        start_t (float): Engine ignition epoch $t_{\text{start}}$ [s].
+        duration (float): Total burn duration $\Delta t$ [s].
+        thrust_vec (np.ndarray): Applied thrust vector $\mathbf{F}_{\text{thrust}}$ [N].
+        mass (float): Spacecraft mass $m$ [kg].
+
+    Returns:
+        np.ndarray: Thrust acceleration vector $\mathbf{a}_{\text{thrust}}$ [$\text{m/s}^2$].
+    """
     if start_t <= t <= (start_t + duration):
         return thrust_vec / mass
     return np.array([0.0, 0.0, 0.0])
 
 
 def accel_electric_prograde(v: np.ndarray, thrust_mag: float, mass: float) -> np.ndarray:
-    """Continuous low-thrust acceleration steered along velocity unit vector."""
+    r"""
+    Continuous low-thrust propulsion aligned with the velocity unit vector (prograde).
+
+    $$
+    \mathbf{a}_{\text{low-thrust}} = \frac{T}{m} \hat{\mathbf{v}} = \frac{T}{m} \left( \frac{\mathbf{v}}{\|\mathbf{v}\|} \right)
+    $$
+
+    Args:
+        v (np.ndarray): Spacecraft inertial velocity vector $\mathbf{v}$ in ECI frame [m/s].
+        thrust_mag (float): Thrust magnitude $T$ [N].
+        mass (float): Instantaneous spacecraft mass $m$ [kg].
+
+    Returns:
+        np.ndarray: Prograde low-thrust acceleration vector $\mathbf{a}_{\text{low-thrust}}$ [$\text{m/s}^2$].
+    """
     v_mag = np.linalg.norm(v)
     if v_mag == 0.0:
         return np.array([0.0, 0.0, 0.0])
@@ -170,12 +338,42 @@ def accel_electric_prograde(v: np.ndarray, thrust_mag: float, mass: float) -> np
 
 
 def eci_to_lvlh(r_chief: np.ndarray, v_chief: np.ndarray, r_deputy: np.ndarray) -> np.ndarray:
-    """
-    Transforms deputy position relative to chief from ECI to LVLH (Hill's) frame.
+    r"""
+    Transforms deputy position relative to chief from ECI to the Local-Vertical/Local-Horizontal (LVLH / Hill's) frame.
+
+    Constructs the orthonormal reference triad:
+
+    $$
+    \hat{\mathbf{e}}_r = \frac{\mathbf{r}_c}{\|\mathbf{r}_c\|}, \quad
+    \hat{\mathbf{e}}_h = \frac{\mathbf{r}_c \times \mathbf{v}_c}{\|\mathbf{r}_c \times \mathbf{v}_c\|}, \quad
+    \hat{\mathbf{e}}_\theta = \hat{\mathbf{e}}_h \times \hat{\mathbf{e}}_r
+    $$
+
+    and maps the relative displacement $\delta \mathbf{r}_{\text{ECI}} = \mathbf{r}_d - \mathbf{r}_c$:
+
+    $$
+    \delta \mathbf{r}_{\text{LVLH}} =
+    \begin{bmatrix}
+    \hat{\mathbf{e}}_r^T \\
+    \hat{\mathbf{e}}_\theta^T \\
+    \hat{\mathbf{e}}_h^T
+    \end{bmatrix}
+    \delta \mathbf{r}_{\text{ECI}} =
+    \begin{bmatrix}
+    x_{\text{radial}} \\
+    y_{\text{along-track}} \\
+    z_{\text{cross-track}}
+    \end{bmatrix}
+    $$
+
+    Args:
+        r_chief (np.ndarray): Chief position vector $\mathbf{r}_c$ in ECI [m].
+        v_chief (np.ndarray): Chief velocity vector $\mathbf{v}_c$ in ECI [m/s].
+        r_deputy (np.ndarray): Deputy position vector $\mathbf{r}_d$ in ECI [m].
+
     Returns:
-        delta_r_lvlh = [x_radial, y_along_track, z_cross_track] in meters.
+        np.ndarray: Relative displacement $\delta \mathbf{r}_{\text{LVLH}} = [x_{\text{radial}}, y_{\text{along-track}}, z_{\text{cross-track}}]^T$ [m].
     """
-    # Unit vectors of LVLH frame
     r_c_mag = np.linalg.norm(r_chief)
     e_r = r_chief / r_c_mag
 
@@ -184,11 +382,7 @@ def eci_to_lvlh(r_chief: np.ndarray, v_chief: np.ndarray, r_deputy: np.ndarray) 
 
     e_theta = np.cross(e_h, e_r)
 
-    # Rotation matrix (rows are the unit basis vectors)
     r_eci_to_lvlh = np.vstack([e_r, e_theta, e_h])
-
-    # Relative displacement in ECI
     delta_r_eci = r_deputy - r_chief
 
-    # Transform to LVLH
     return r_eci_to_lvlh @ delta_r_eci
