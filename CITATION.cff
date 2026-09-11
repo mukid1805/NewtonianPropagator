@@ -7,6 +7,7 @@ abstract: >-
   dynamics, perturbed orbital mechanics (J2–J4, SRP, atmospheric drag), Lambert boundary-value
   targeting, low-thrust propulsion modeling, and launch vehicle C3 capacity analysis.
 type: software
+license: MIT
 authors:
   - given-names: "Mukid"
     family-names: "Valsangkar"
