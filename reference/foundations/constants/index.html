@@ -12,29 +12,31 @@
         <meta name="author" content="mukid1805">
       
       
-        <link rel="canonical" href="https://mukid1805.github.io/NewtonianPropagator/">
+        <link rel="canonical" href="https://mukid1805.github.io/NewtonianPropagator/reference/foundations/constants/">
       
       
+        <link rel="prev" href="../../..">
       
-        <link rel="next" href="reference/foundations/constants/">
+      
+        <link rel="next" href="../ephemeris/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>NewtonianPropagator API Reference</title>
+        <title>constants - NewtonianPropagator API Reference</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,11 +55,11 @@
       
     
     
-      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
-      <link rel="stylesheet" href="stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -81,6 +83,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#core.constants" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -93,7 +100,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="NewtonianPropagator API Reference" class="md-header__button md-logo" aria-label="NewtonianPropagator API Reference" data-md-component="logo">
+    <a href="../../.." title="NewtonianPropagator API Reference" class="md-header__button md-logo" aria-label="NewtonianPropagator API Reference" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -113,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              constants
             
           </span>
         </div>
@@ -236,7 +243,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="NewtonianPropagator API Reference" class="md-nav__button md-logo" aria-label="NewtonianPropagator API Reference" data-md-component="logo">
+    <a href="../../.." title="NewtonianPropagator API Reference" class="md-nav__button md-logo" aria-label="NewtonianPropagator API Reference" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -263,17 +270,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -289,7 +289,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -298,8 +297,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -310,11 +311,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
@@ -335,7 +336,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -350,6 +351,8 @@
                 
   
   
+    
+  
   
   
     
@@ -359,11 +362,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1" checked>
         
           
           <label class="md-nav__link" for="__nav_2_1" id="__nav_2_1_label" tabindex="0">
@@ -384,7 +387,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_1_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_1_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -399,10 +402,35 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="reference/foundations/constants/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    constants
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -418,6 +446,85 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core.constants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        constants
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="constants">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core.constants--fundamental-reference-constants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fundamental &amp; Reference Constants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core.constants--planetary-gravitational-parameters-mu-gm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Planetary &amp; Gravitational Parameters (\(\mu = GM\))
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core.constants--geopotential-zonal-harmonics-egm96-wgs-84" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geopotential Zonal Harmonics (EGM96 / WGS-84)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core.constants--atmosphere-radiation-heliocentric-orbits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Atmosphere, Radiation &amp; Heliocentric Orbits
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -430,7 +537,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/foundations/ephemeris/" class="md-nav__link">
+      <a href="../ephemeris/" class="md-nav__link">
         
   
   
@@ -458,7 +565,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/foundations/time/" class="md-nav__link">
+      <a href="../time/" class="md-nav__link">
         
   
   
@@ -543,7 +650,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/mission_design/cr3bp/" class="md-nav__link">
+      <a href="../../mission_design/cr3bp/" class="md-nav__link">
         
   
   
@@ -571,7 +678,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/mission_design/flyby/" class="md-nav__link">
+      <a href="../../mission_design/flyby/" class="md-nav__link">
         
   
   
@@ -599,7 +706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/mission_design/lambert/" class="md-nav__link">
+      <a href="../../mission_design/lambert/" class="md-nav__link">
         
   
   
@@ -684,7 +791,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/dynamics_propagation/forces/" class="md-nav__link">
+      <a href="../../dynamics_propagation/forces/" class="md-nav__link">
         
   
   
@@ -712,7 +819,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/dynamics_propagation/integrators/" class="md-nav__link">
+      <a href="../../dynamics_propagation/integrators/" class="md-nav__link">
         
   
   
@@ -740,7 +847,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/dynamics_propagation/propagator/" class="md-nav__link">
+      <a href="../../dynamics_propagation/propagator/" class="md-nav__link">
         
   
   
@@ -825,7 +932,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/constellations_launch/launchers/" class="md-nav__link">
+      <a href="../../constellations_launch/launchers/" class="md-nav__link">
         
   
   
@@ -853,7 +960,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/constellations_launch/swarm/" class="md-nav__link">
+      <a href="../../constellations_launch/swarm/" class="md-nav__link">
         
   
   
@@ -907,6 +1014,75 @@
   
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#core.constants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        constants
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="constants">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core.constants--fundamental-reference-constants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fundamental &amp; Reference Constants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core.constants--planetary-gravitational-parameters-mu-gm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Planetary &amp; Gravitational Parameters (\(\mu = GM\))
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core.constants--geopotential-zonal-harmonics-egm96-wgs-84" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Geopotential Zonal Harmonics (EGM96 / WGS-84)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core.constants--atmosphere-radiation-heliocentric-orbits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Atmosphere, Radiation &amp; Heliocentric Orbits
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -925,9 +1101,264 @@
   
 
 
-<h1 id="newtonianpropagator">NewtonianPropagator</h1>
-<p>High-Fidelity 6-DOF/7-DOF Astrodynamics &amp; Multi-Body Simulation Engine.</p>
-<p>Select <strong><a href="reference/foundations/constants/">API Reference</a></strong> in the navigation menu to browse the module documentation.</p>
+<h1 id="constants">constants</h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="core.constants" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">core.constants</span>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Universal physical, planetary, and orbital constants (SI Units).</p>
+<h4 id="core.constants--fundamental-reference-constants">Fundamental &amp; Reference Constants</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Constant</th>
+<th style="text-align: left;">Value</th>
+<th style="text-align: left;">Units</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>G</code></td>
+<td style="text-align: left;"><code>6.67430e-11</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}^3 / (\text{kg} \cdot \text{s}^2)\)</span></td>
+<td style="text-align: left;">CODATA 2018 Newtonian gravitational constant</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>G0</code></td>
+<td style="text-align: left;"><code>9.80665</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m} / \text{s}^2\)</span></td>
+<td style="text-align: left;">Standard Earth gravitational acceleration</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>AU</code></td>
+<td style="text-align: left;"><code>149597870700.0</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Astronomical Unit (IAU 2012 standard)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="core.constants--planetary-gravitational-parameters-mu-gm">Planetary &amp; Gravitational Parameters (<span class="arithmatex">\(\mu = GM\)</span>)</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Constant</th>
+<th style="text-align: left;">Value</th>
+<th style="text-align: left;">Units</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>G_EARTH</code></td>
+<td style="text-align: left;"><code>3.986004418e14</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}^3 / \text{s}^2\)</span></td>
+<td style="text-align: left;">Earth standard gravitational parameter (<span class="arithmatex">\(\mu_\oplus\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_EARTH</code></td>
+<td style="text-align: left;"><code>6378137.0</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">WGS-84 Earth equatorial radius (<span class="arithmatex">\(R_\oplus\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>OMEGA_EARTH</code></td>
+<td style="text-align: left;"><code>7.2921159e-5</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{rad} / \text{s}\)</span></td>
+<td style="text-align: left;">Earth nominal rotation rate (<span class="arithmatex">\(\omega_\oplus\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>G_MOON</code></td>
+<td style="text-align: left;"><code>4.9048695e12</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}^3 / \text{s}^2\)</span></td>
+<td style="text-align: left;">Lunar standard gravitational parameter (<span class="arithmatex">\(\mu_{\text{Moon}}\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_MOON</code></td>
+<td style="text-align: left;"><code>1737400.0</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Mean volumetric radius of the Moon</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_MOON_ORBIT</code></td>
+<td style="text-align: left;"><code>3.844e8</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Earth-Moon mean semi-major axis</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>OMEGA_MOON</code></td>
+<td style="text-align: left;"><code>2.6617e-6</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{rad} / \text{s}\)</span></td>
+<td style="text-align: left;">Lunar mean orbital motion (<span class="arithmatex">\(\omega_{\text{Moon}}\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>G_SUN</code></td>
+<td style="text-align: left;"><code>1.32712440018e20</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}^3 / \text{s}^2\)</span></td>
+<td style="text-align: left;">Solar gravitational parameter (<span class="arithmatex">\(\mu_\odot\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>G_MARS</code></td>
+<td style="text-align: left;"><code>4.282837e13</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}^3 / \text{s}^2\)</span></td>
+<td style="text-align: left;">Mars gravitational parameter (<span class="arithmatex">\(\mu_{\text{Mars}}\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_MARS</code></td>
+<td style="text-align: left;"><code>3396190.0</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Mars equatorial radius</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>G_VENUS</code></td>
+<td style="text-align: left;"><code>3.24859e14</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}^3 / \text{s}^2\)</span></td>
+<td style="text-align: left;">Venus gravitational parameter (<span class="arithmatex">\(\mu_{\text{Venus}}\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_VENUS</code></td>
+<td style="text-align: left;"><code>6051800.0</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Venus mean planetary radius</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>G_JUPITER</code></td>
+<td style="text-align: left;"><code>1.26686534e17</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}^3 / \text{s}^2\)</span></td>
+<td style="text-align: left;">Jupiter gravitational parameter (<span class="arithmatex">\(\mu_{\text{Jupiter}}\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_JUPITER</code></td>
+<td style="text-align: left;"><code>71492000.0</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Jupiter equatorial radius</td>
+</tr>
+</tbody>
+</table>
+<h4 id="core.constants--geopotential-zonal-harmonics-egm96-wgs-84">Geopotential Zonal Harmonics (EGM96 / WGS-84)</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Constant</th>
+<th style="text-align: left;">Value</th>
+<th style="text-align: left;">Units</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>J2_EARTH</code></td>
+<td style="text-align: left;"><code>1.08262668e-3</code></td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">Unnormalized second zonal harmonic (oblateness)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>J3_EARTH</code></td>
+<td style="text-align: left;"><code>-2.53265649e-6</code></td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">Unnormalized third zonal harmonic (pear shape)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>J4_EARTH</code></td>
+<td style="text-align: left;"><code>-1.61962160e-6</code></td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">Unnormalized fourth zonal harmonic</td>
+</tr>
+</tbody>
+</table>
+<h4 id="core.constants--atmosphere-radiation-heliocentric-orbits">Atmosphere, Radiation &amp; Heliocentric Orbits</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Constant</th>
+<th style="text-align: left;">Value</th>
+<th style="text-align: left;">Units</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>RHO_0</code></td>
+<td style="text-align: left;"><code>1.225</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{kg} / \text{m}^3\)</span></td>
+<td style="text-align: left;">Sea-level atmospheric reference density (<span class="arithmatex">\(\rho_0\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>SCALE_HEIGHT</code></td>
+<td style="text-align: left;"><code>8500.0</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Atmospheric density scale height (<span class="arithmatex">\(H\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>P_SUN_1AU</code></td>
+<td style="text-align: left;"><code>4.56e-6</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{N} / \text{m}^2\)</span></td>
+<td style="text-align: left;">Solar radiation pressure flux at 1 AU</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_ORBIT_EARTH</code></td>
+<td style="text-align: left;"><code>1.000 * AU</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Mean orbital radius of Earth</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_ORBIT_MARS</code></td>
+<td style="text-align: left;"><code>1.524 * AU</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Mean orbital radius of Mars</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_ORBIT_VENUS</code></td>
+<td style="text-align: left;"><code>0.723 * AU</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Mean orbital radius of Venus</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>R_ORBIT_JUPITER</code></td>
+<td style="text-align: left;"><code>5.204 * AU</code></td>
+<td style="text-align: left;"><span class="arithmatex">\(\text{m}\)</span></td>
+<td style="text-align: left;">Mean orbital radius of Jupiter</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
 
 
 
@@ -983,12 +1414,12 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["toc.follow", "navigation.top", "navigation.instant", "navigation.tracking", "navigation.sections", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["toc.follow", "navigation.top", "navigation.instant", "navigation.tracking", "navigation.sections", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
-        <script src="javascripts/mathjax.js"></script>
+        <script src="../../../javascripts/mathjax.js"></script>
       
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
       
