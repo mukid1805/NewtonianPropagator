@@ -35,16 +35,41 @@ venv.bak/
 
 # IDE files
 .idea/
+.idea_backup/
 .vscode/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
-# Output figures / test cache
+# Testing & Coverage cache
 .pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
 
 # setuptools-scm build output
 core/_version.py
-.idea_backup/
 
-# Site artifacts
+# Documentation & Site builds (MkDocs / Sphinx)
 site/
+.cache/
+docs/reference/SUMMARY.md
+docs/reference/*/*.md
+
+# Jupyter Notebook checkpoints & autosaves
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

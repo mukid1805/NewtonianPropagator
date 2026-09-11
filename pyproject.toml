@@ -7,12 +7,47 @@ name = "newtonian-propagator"
 dynamic = ["version"]
 description = "Multi-Body Orbital Dynamics, Interplanetary Targeting & Swarm Engine"
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.10"
-dependencies = [
-    "numpy>=1.22.0",
-    "scipy>=1.9.0",
-    "matplotlib>=3.5.0"
+authors = [
+    { name = "mukid1805" }
 ]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "matplotlib>=3.7.0",
+]
+
+[project.optional-dependencies]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
+    "mkdocs-gen-files>=0.5.0",
+    "mkdocs-literate-nav>=0.6.0",
+    "ruff>=0.1.0",
+]
+
+dev = [
+    "newtonian-propagator[docs,test]",
+]
+
+[project.urls]
+Homepage = "https://github.com/mukid1805/NewtonianPropagator"
+Documentation = "https://mukid1805.github.io/NewtonianPropagator/"
+Repository = "https://github.com/mukid1805/NewtonianPropagator"
+Issues = "https://github.com/mukid1805/NewtonianPropagator/issues"
 
 [tool.setuptools_scm]
 write_to = "core/_version.py"

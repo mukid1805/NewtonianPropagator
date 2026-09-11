@@ -1,6 +1,7 @@
 site_name: NewtonianPropagator API Reference
 site_description: High-Fidelity 6-DOF/7-DOF Astrodynamics & Multi-Body Simulation Engine
 site_author: mukid1805
+site_url: https://mukid1805.github.io/NewtonianPropagator/
 repo_url: https://github.com/mukid1805/NewtonianPropagator
 repo_name: mukid1805/NewtonianPropagator
 
@@ -8,7 +9,7 @@ theme:
   name: material
   language: en
   palette:
-    # Light mode
+    # 1. Light Mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: indigo
@@ -16,7 +17,7 @@ theme:
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    # Dark mode
+    # 2. Dark Mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: indigo
@@ -29,10 +30,11 @@ theme:
     code: Roboto Mono
   features:
     - toc.follow
-    - toc.integrate # Comment to place TOC outside (the right) sidebar instead of the left
+    # - toc.integrate   # DISABLED: Kept disabled for right-side sticky TOC
     - navigation.top
     - navigation.instant
     - navigation.tracking
+    - navigation.sections        # Renders multi-page sections cleanly in left sidebar
     - search.suggest
     - search.highlight
     - search.share
@@ -40,41 +42,57 @@ theme:
     - content.code.annotate
 
 plugins:
+  - gen-files:
+      scripts:
+        - docs/gen_ref_nav.py    # Must run before literate-nav and mkdocstrings
+  - literate-nav:
+      nav_file: SUMMARY.md
   - search
   - mkdocstrings:
       handlers:
         python:
           paths: [.]
           options:
+            docstring_style: google
+            docstring_section_style: table
             show_source: true
             show_root_heading: true
             show_category_heading: false
             show_signature_annotations: true
             separate_signature: true
             merge_init_into_class: true
-            docstring_section_style: table
             signature_crossrefs: true
+            show_docstring_attributes: false
+            docstring_options:
+              ignore_init_summary: true
+            filters:
+                - "!^_[^_]"          # Exclude single underscore private variables
+                - "!^[A-Z0-9_]+$"    # Exclude ALL-CAPS variables (AU, PLANET_DATA, C2, etc.)
+
+nav:
+  - Home: index.md
+  - API Reference: reference/
 
 markdown_extensions:
   - toc:
-      permalink: true
-      toc_depth: 2-3
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences
-  - pymdownx.inlinehilite
-  - pymdownx.tabbed:
-      alternate_style: true
+      permalink: false
+      toc_depth: 2-4
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
-  - pymdownx.arithmatex:
-      generic: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
 
 extra_javascript:
-  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js
   - javascripts/mathjax.js
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js
 
 extra_css:
   - stylesheets/extra.css

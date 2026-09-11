@@ -1,5 +1,14 @@
+# --- Core Astrodynamics & Computation ---
 numpy>=1.24.0
 scipy>=1.10.0
 matplotlib>=3.7.0
+
+# --- Documentation Engine ---
+mkdocs>=1.6.0
 mkdocs-material>=9.5.0
 mkdocstrings[python]>=0.24.0
+mkdocs-gen-files>=0.5.0
+mkdocs-literate-nav>=0.6.0
+
+# --- Signature Formatting & Code Quality ---
+ruff>=0.1.0
