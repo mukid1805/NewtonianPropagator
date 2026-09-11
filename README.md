@@ -1,7 +1,7 @@
 # NewtonianPropagator: Multi-Body Orbital Dynamics & Swarm Simulation Engine
 
 [![CI Test Suite](https://github.com/mukid1805/NewtonianPropagator/actions/workflows/tests.yml/badge.svg)](https://github.com/mukid1805/NewtonianPropagator/actions/workflows/tests.yml)
-
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
 [![Release](https://img.shields.io/github/v/release/mukid1805/NewtonianPropagator?include_prereleases&color=blue&logo=github)](https://github.com/mukid1805/NewtonianPropagator/releases)
@@ -168,6 +168,7 @@ NewtonianPropagator/
 ├── .gitignore                               # Comprehensive Git exclusion rules
 ├── CITATION.cff                             # Academic citation metadata
 ├── environment.yml                          # Conda environment definition
+├── LICENSE                                  # MIT Open-Source License
 ├── main.py                                  # Interactive CLI demonstration launcher
 ├── mkdocs.yml                               # MkDocs configuration & Material theme settings
 ├── pyproject.toml                           # PEP 517/621 package configuration
@@ -276,4 +277,9 @@ flowchart TD
     CR3BP --> OUT_PLOTS
     SWARM --> OUT_PLOTS
 ```
+---
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ---
