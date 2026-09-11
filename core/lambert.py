@@ -1,11 +1,15 @@
+r"""Universal Variables Lambert Boundary Value Problem Solver.
+
+Implements the Bate-Mueller-White universal variable formulation with canonical
+scaling and root-bounding for transfer orbits (elliptical, parabolic, hyperbolic).
 """
-Universal Variables Lambert Solver (Bate-Mueller-White formulation).
-Includes Canonical Scaling and strict bounds for extreme hyperbolic/elliptical transfers.
-"""
+
+from typing import Tuple
 import numpy as np
 
 
 def _stumpff_c(z: float) -> float:
+    r"""Evaluate the Stumpff function $c(z)$."""
     if z > 1e-6:
         return (1.0 - np.cos(np.sqrt(z))) / z
     elif z < -1e-6:
@@ -14,6 +18,7 @@ def _stumpff_c(z: float) -> float:
 
 
 def _stumpff_s(z: float) -> float:
+    r"""Evaluate the Stumpff function $s(z)$."""
     if z > 1e-6:
         sz = np.sqrt(z)
         return (sz - np.sin(sz)) / (sz**3)
@@ -23,12 +28,36 @@ def _stumpff_s(z: float) -> float:
     return (1.0 / 6.0) - z / 120.0 + (z**2) / 5040.0
 
 
-def solve_lambert(r1, r2, tof, mu, prograde=True, max_iter=100, tol=1e-10):
+def solve_lambert(
+    r1: np.ndarray,
+    r2: np.ndarray,
+    tof: float,
+    mu: float,
+    prograde: bool = True,
+    max_iter: int = 100,
+    tol: float = 1e-10
+) -> Tuple[np.ndarray, np.ndarray]:
+    r"""Solve the two-point boundary value Lambert orbital transfer problem.
+
+    Args:
+        r1: Initial position vector $\mathbf{r}_1$ of shape `(3,)` [$\text{m}$ or $\text{km}$].
+        r2: Target position vector $\mathbf{r}_2$ of shape `(3,)` [$\text{m}$ or $\text{km}$].
+        tof: Transfer time of flight $\Delta t$ in seconds. Must be positive.
+        mu: Gravitational parameter $\mu$ of central attractor in consistent units.
+        prograde: Transfer plane direction. `True` for short-way ($\Delta \nu < \pi$),
+            `False` for retrograde / long-way transfer. Defaults to `True`.
+        max_iter: Maximum allowable Newton-Raphson iterations. Defaults to `100`.
+        tol: Root-finding convergence tolerance. Defaults to `1e-10`.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: A tuple `(v1, v2)` containing:
+            - **v1** (`np.ndarray`): Departure velocity vector $\mathbf{v}_1$ of shape `(3,)`.
+            - **v2** (`np.ndarray`): Arrival velocity vector $\mathbf{v}_2$ of shape `(3,)`.
+
+    Raises:
+        ValueError: If $180^\circ$ collinear singularity is encountered or if
+            the solver fails to converge within `max_iter`.
     """
-    Solves the Lambert Boundary Value Problem.
-    Returns v1, v2 (velocity vectors at r1 and r2).
-    """
-    # Canonical Scaling for numerical stability
     r_unit = float(np.linalg.norm(r1))
     v_unit = np.sqrt(mu / r_unit)
     t_unit = r_unit / v_unit
@@ -50,9 +79,9 @@ def solve_lambert(r1, r2, tof, mu, prograde=True, max_iter=100, tol=1e-10):
         dtheta = np.arccos(cos_dtheta) if cross_12[2] <= 0.0 else 2.0 * np.pi - np.arccos(cos_dtheta)
 
     sin_dtheta = np.sin(dtheta)
-    A = sin_dtheta * np.sqrt(r1_norm * r2_norm / (1.0 - cos_dtheta))
+    a_param = sin_dtheta * np.sqrt(r1_norm * r2_norm / (1.0 - cos_dtheta))
 
-    if abs(A) < 1e-12:
+    if abs(a_param) < 1e-12:
         raise ValueError("Collinear singularity (180 degree transfer).")
 
     z = 0.0
@@ -61,14 +90,13 @@ def solve_lambert(r1, r2, tof, mu, prograde=True, max_iter=100, tol=1e-10):
     for _ in range(max_iter):
         cz = max(1e-15, _stumpff_c(z))
         sz = _stumpff_s(z)
-        yz = r1_norm + r2_norm + A * (z * sz - 1.0) / np.sqrt(cz)
+        yz = r1_norm + r2_norm + a_param * (z * sz - 1.0) / np.sqrt(cz)
 
         if yz < 0.0:
-            # Step back if unphysical
             z += 1.0
             continue
 
-        tof_calc = ((yz / cz)**1.5 * sz + A * np.sqrt(yz)) / np.sqrt(mu_nd)
+        tof_calc = ((yz / cz)**1.5 * sz + a_param * np.sqrt(yz)) / np.sqrt(mu_nd)
         f_val = tof_calc - tof_nd
 
         if abs(f_val) < tol:
@@ -78,18 +106,17 @@ def solve_lambert(r1, r2, tof, mu, prograde=True, max_iter=100, tol=1e-10):
         dz = 1e-5
         cz_plus = max(1e-15, _stumpff_c(z + dz))
         sz_plus = _stumpff_s(z + dz)
-        yz_plus = r1_norm + r2_norm + A * ((z + dz) * sz_plus - 1.0) / np.sqrt(cz_plus)
+        yz_plus = r1_norm + r2_norm + a_param * ((z + dz) * sz_plus - 1.0) / np.sqrt(cz_plus)
 
         if yz_plus < 0.0:
             dt_dz = 1e-8
         else:
-            t_plus = ((yz_plus / cz_plus)**1.5 * sz_plus + A * np.sqrt(yz_plus)) / np.sqrt(mu_nd)
+            t_plus = ((yz_plus / cz_plus)**1.5 * sz_plus + a_param * np.sqrt(yz_plus)) / np.sqrt(mu_nd)
             dt_dz = (t_plus - tof_calc) / dz
 
         if abs(dt_dz) < 1e-15:
             break
 
-        # Newton Step with strict clamping
         step = f_val / dt_dz
         step = max(-50.0, min(50.0, step))
         z = z - step
@@ -98,9 +125,9 @@ def solve_lambert(r1, r2, tof, mu, prograde=True, max_iter=100, tol=1e-10):
     if not converged:
         raise ValueError("Lambert solver failed to converge.")
 
-    yz = r1_norm + r2_norm + A * (z * _stumpff_s(z) - 1.0) / np.sqrt(max(1e-15, _stumpff_c(z)))
+    yz = r1_norm + r2_norm + a_param * (z * _stumpff_s(z) - 1.0) / np.sqrt(max(1e-15, _stumpff_c(z)))
     f = 1.0 - yz / r1_norm
-    g = A * np.sqrt(yz / mu_nd)
+    g = a_param * np.sqrt(yz / mu_nd)
     gdot = 1.0 - yz / r2_norm
 
     v1_nd = (r2_nd - f * r1_nd) / g

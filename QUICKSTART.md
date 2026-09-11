@@ -57,10 +57,10 @@ Maximum Relative Energy Drift: 8.14e-10
 Orbit Type: Circular LEO (e = 0)
 Number of Orbits: 5
 Initial Specific Energy: -28975901.5995 J/kg
-Maximum Relative Energy Drift: 4.52e-12
-...................
+Maximum Relative Energy Drift: 4.54e-12
+.............................
 ----------------------------------------------------------------------
-Ran 25 tests in 0.471s
+Ran 35 tests in 0.533s
 
 OK
 ```

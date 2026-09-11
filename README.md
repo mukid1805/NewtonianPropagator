@@ -117,7 +117,6 @@ NewtonianPropagator/
 │       └── update-citation.yml              # Automated CITATION.cff tag sync workflow
 ├── core/
 │   ├── __init__.py                          # Package definitions and version hook
-│   ├── _version.py                          # Generated dynamic version file (setuptools-scm)
 │   ├── constants.py                         # Universal physical, gravitational, and orbital constants
 │   ├── cr3bp.py                             # CR3BP synodic dynamics, Lagrange solvers, frame transforms
 │   ├── ephemeris.py                         # Analytical planetary ephemerides and state vectors
@@ -134,11 +133,12 @@ NewtonianPropagator/
 │   ├── template_custom_orbit.py             # Parametric sandbox for custom orbital propagation
 │   └── template_interplanetary_mission.py   # Starter template for Lambert targeting & launch sizing
 ├── docs/
-│   ├── index.md                             # Automated MkDocs Core API Reference landing page
 │   ├── javascripts/
 │   │   └── mathjax.js                       # MathJax configuration & math typesetting integration
-│   └── stylesheets/
-│       └── extra.css                        # Custom typography, layout overrides & sticky TOC styling
+│   ├── stylesheets/
+│   │   └── extra.css                        # Custom typography, layout overrides & sticky TOC styling
+│   ├── gen_ref_nav.py                       # Automated MkDocs reference navigation generator script
+│   └── index.md                             # Automated MkDocs Core API Reference landing page
 ├── examples/
 │   ├── __init__.py
 │   ├── ex01_lunar_impulsive_transfer.py     # Scenario 1: Lunar 3rd-body perturbation & impulsive burn
@@ -156,13 +156,16 @@ NewtonianPropagator/
 │   ├── __init__.py
 │   ├── test_cr3bp.py                        # Lagrange equilibrium points & Jacobi constant conservation
 │   ├── test_energy_conservation.py          # Specific mechanical energy drift assertions (RK4 & RK45)
+│   ├── test_ephemeris.py                    # Heliocentric state projections and SOI bounds verification
 │   ├── test_flyby.py                        # Gravity assist turning angle & Delta-V validation
 │   ├── test_forces.py                       # Acceleration models, harmonics, drag, SRP, and frame transforms
 │   ├── test_lambert.py                      # Validation of BVP solver boundary conditions
 │   ├── test_launchers.py                    # Empirical C3 curve decay & Tsiolkovsky multi-stage tests
+│   ├── test_propagator.py                   # 6-DOF/7-DOF engine state transitions and burn window tests
+│   ├── test_swarm.py                        # Multi-agent constellation registration and LVLH tests
 │   └── test_time.py                         # Epoch and temporal conversion assertions
 ├── .gitattributes                           # Path overrides & Linguist language filtering
-├── .gitignore                               # Git exclusion rules
+├── .gitignore                               # Comprehensive Git exclusion rules
 ├── CITATION.cff                             # Academic citation metadata
 ├── environment.yml                          # Conda environment definition
 ├── main.py                                  # Interactive CLI demonstration launcher

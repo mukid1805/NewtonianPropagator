@@ -1,8 +1,10 @@
+r"""Launch Vehicle Performance & Payload Injection Capacity Engine.
+
+Provides empirical characteristic launch energy ($C_3$) curves, stage mass
+breakdowns, Tsiolkovsky rocket equation models, and catalog specifications
+for active and legacy launch vehicles.
 """
-core/launchers.py - Launch Vehicle Performance & Payload Injection Capacity Engine.
-Provides empirical C3 vs. payload curves, stage mass properties, Tsiolkovsky rocket
-equation calculations, and catalog specifications for active and legacy rockets.
-"""
+
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 import numpy as np
@@ -12,7 +14,16 @@ from core.constants import G0
 
 @dataclass
 class StageSpec:
-    """Represents an individual propulsion stage."""
+    r"""Individual propulsion stage specification.
+
+    Args:
+        name: Stage designation identifier.
+        propellant_mass_kg: Total usable onboard propellant mass [$\text{kg}$].
+        dry_mass_kg: Structural stage burnout dry mass [$\text{kg}$].
+        isp_vac_s: Vacuum specific impulse $I_{\text{sp}}$ [$\text{s}$].
+        thrust_vac_n: Total vacuum engine thrust rating [$\text{N}$].
+    """
+
     name: str
     propellant_mass_kg: float
     dry_mass_kg: float
@@ -21,10 +32,22 @@ class StageSpec:
 
     @property
     def total_mass_kg(self) -> float:
+        r"""Total initial wet mass of the stage in $\text{kg}$."""
         return self.propellant_mass_kg + self.dry_mass_kg
 
     def stage_delta_v(self, payload_mass_kg: float) -> float:
-        """Calculates ideal vacuum Delta-V (m/s) via the Tsiolkovsky Rocket Equation."""
+        r"""Calculate ideal vacuum Delta-V via the Tsiolkovsky Rocket Equation.
+
+        $$
+        \Delta V = g_0 I_{\text{sp}} \ln\left(\frac{m_{\text{initial}}}{m_{\text{final}}}\right)
+        $$
+
+        Args:
+            payload_mass_kg: Net payload mass mounted atop this stage [$\text{kg}$].
+
+        Returns:
+            float: Achievable ideal velocity increment in $\text{m/s}$.
+        """
         m_initial = self.total_mass_kg + payload_mass_kg
         m_final = self.dry_mass_kg + payload_mass_kg
         if m_final <= 0 or m_initial <= m_final:
@@ -34,35 +57,42 @@ class StageSpec:
 
 @dataclass
 class LaunchVehicle:
+    r"""Launch vehicle model with payload injection curves and stage architectures.
+
+    Args:
+        name: Full vehicle model name.
+        operator: Operating launch provider or agency.
+        status: Operational status (`'active'` or `'legacy'`).
+        leo_capacity_kg: Payload capability to Low Earth Orbit [$\text{kg}$].
+        gto_capacity_kg: Payload capability to Geostationary Transfer Orbit [$\text{kg}$].
+        tli_capacity_kg: Payload capability to Trans-Lunar Injection [$\text{kg}$].
+        max_c3_km2_s2: Maximum characteristic launch energy cut-off [$\text{km}^2 / \text{s}^2$].
+        c3_poly_coeffs: Polynomial coefficients $(c_2, c_1, c_0)$ modeling payload mass
+            as a function of $C_3$: $m(C_3) = c_2 C_3^2 + c_1 C_3 + c_0$.
+        stages: Ordered sequence of stages from booster to upper stage.
     """
-    Launch vehicle model with payload capabilities, stage breakdowns,
-    and high-energy C3 injection polynomial curves.
-    """
+
     name: str
     operator: str
-    status: str  # 'active' or 'legacy'
+    status: str
     leo_capacity_kg: float
     gto_capacity_kg: float
     tli_capacity_kg: Optional[float] = None
     max_c3_km2_s2: float = 100.0
-    # Quadratic fit: mass(C3) = c0 + c1*C3 + c2*C3^2 (where C3 is in km^2/s^2, mass in kg)
-    # Stored as [c2, c1, c0] for standard numpy.polyval evaluation
     c3_poly_coeffs: Optional[Tuple[float, float, float]] = None
     stages: List[StageSpec] = field(default_factory=list)
 
     def payload_for_c3(self, c3_km2_s2: float) -> float:
-        """
-        Computes maximum deliverable payload mass (kg) for a given characteristic energy C3.
+        r"""Compute maximum deliverable payload mass for a given $C_3$ energy.
 
-        Parameters
-        ----------
-        c3_km2_s2 : float
-            Characteristic launch energy (v_infinity^2) in km^2/s^2.
+        Args:
+            c3_km2_s2: Characteristic launch energy $C_3 = v_\infty^2$ in $\text{km}^2 / \text{s}^2$.
 
-        Returns
-        -------
-        float
-            Payload mass in kg (returns 0.0 if C3 exceeds vehicle capability).
+        Returns:
+            float: Maximum deliverable payload mass in $\text{kg}$.
+
+        Raises:
+            NotImplementedError: If `c3_poly_coeffs` is not defined for this vehicle.
         """
         if self.c3_poly_coeffs is None:
             raise NotImplementedError(f"C3 polynomial model is not defined for {self.name}.")
@@ -77,8 +107,13 @@ class LaunchVehicle:
         return float(max(0.0, mass))
 
     def total_vehicle_delta_v(self, payload_mass_kg: float) -> float:
-        """
-        Computes ideal multi-stage Delta-V (m/s) through sequential stage burn/jettison.
+        r"""Compute ideal multi-stage Delta-V through sequential stage burn/jettison.
+
+        Args:
+            payload_mass_kg: Net payload mass carried atop the upper stage [$\text{kg}$].
+
+        Returns:
+            float: Total achievable velocity increment in $\text{m/s}$.
         """
         if not self.stages:
             return 0.0
@@ -86,12 +121,10 @@ class LaunchVehicle:
         total_dv = 0.0
         current_payload = payload_mass_kg
 
-        # Evaluate stages from upper (last) to booster (first)
         for i in reversed(range(len(self.stages))):
             stage = self.stages[i]
             dv_stage = stage.stage_delta_v(current_payload)
             total_dv += dv_stage
-            # Prior stages must carry this stage's entire stack
             current_payload += stage.total_mass_kg
 
         return total_dv
@@ -102,7 +135,6 @@ class LaunchVehicle:
 # =============================================================================
 
 LAUNCH_VEHICLE_CATALOG: Dict[str, LaunchVehicle] = {
-    # --- ISRO (INDIAN SPACE RESEARCH ORGANISATION) ---
     "isro_lvm3": LaunchVehicle(
         name="LVM3 / GSLV Mk III (Chandrayaan / Gaganyaan)",
         operator="ISRO",
@@ -165,8 +197,6 @@ LAUNCH_VEHICLE_CATALOG: Dict[str, LaunchVehicle] = {
             StageSpec("VTM (Velocity Trimming Module)", propellant_mass_kg=50.0, dry_mass_kg=25.0, isp_vac_s=300.0, thrust_vac_n=0.5e3),
         ]
     ),
-
-    # --- SPACEX ---
     "falcon_9_reusable": LaunchVehicle(
         name="Falcon 9 (Drone Ship ASDS Recovery)",
         operator="SpaceX",
@@ -209,8 +239,6 @@ LAUNCH_VEHICLE_CATALOG: Dict[str, LaunchVehicle] = {
             StageSpec("Stage 2 (M1D-Vac)", propellant_mass_kg=107500.0, dry_mass_kg=4000.0, isp_vac_s=348.0, thrust_vac_n=981e3),
         ]
     ),
-
-    # --- ROCKET LAB ---
     "electron": LaunchVehicle(
         name="Electron (Kick Stage / Curie)",
         operator="Rocket Lab",
@@ -226,8 +254,6 @@ LAUNCH_VEHICLE_CATALOG: Dict[str, LaunchVehicle] = {
             StageSpec("Curie Kick Stage", propellant_mass_kg=45.0, dry_mass_kg=12.0, isp_vac_s=313.0, thrust_vac_n=120.0),
         ]
     ),
-
-    # --- ULA & NASA ---
     "atlas_v_551": LaunchVehicle(
         name="Atlas V 551 (Centaur)",
         operator="ULA",
@@ -256,8 +282,6 @@ LAUNCH_VEHICLE_CATALOG: Dict[str, LaunchVehicle] = {
             StageSpec("ICPS (1x RL10B-2)", propellant_mass_kg=28500.0, dry_mass_kg=3500.0, isp_vac_s=465.5, thrust_vac_n=110e3),
         ]
     ),
-
-    # --- HISTORIC / LEGACY ---
     "saturn_v": LaunchVehicle(
         name="Saturn V (Apollo Benchmark)",
         operator="NASA",
@@ -292,7 +316,17 @@ LAUNCH_VEHICLE_CATALOG: Dict[str, LaunchVehicle] = {
 
 
 def get_launcher(vehicle_key: str) -> LaunchVehicle:
-    """Retrieves a LaunchVehicle instance from the catalog by key."""
+    r"""Retrieve a `LaunchVehicle` instance from the catalog by key.
+
+    Args:
+        vehicle_key: Catalog lookup key (e.g., `'falcon_9_reusable'`, `'isro_lvm3'`).
+
+    Returns:
+        LaunchVehicle: The matching vehicle specification instance.
+
+    Raises:
+        KeyError: If `vehicle_key` is not found in the vehicle catalog.
+    """
     key = vehicle_key.lower().strip()
     if key not in LAUNCH_VEHICLE_CATALOG:
         available = ", ".join(LAUNCH_VEHICLE_CATALOG.keys())
@@ -301,7 +335,12 @@ def get_launcher(vehicle_key: str) -> LaunchVehicle:
 
 
 def list_available_launchers() -> List[Dict[str, str]]:
-    """Returns a list of all available launchers with their status and operator."""
+    r"""Retrieve a summary list of all cataloged launch vehicles.
+
+    Returns:
+        List[Dict[str, str]]: Dictionaries containing launcher summaries with keys:
+            `'key'`, `'name'`, `'operator'`, and `'status'`.
+    """
     return [
         {"key": key, "name": lv.name, "operator": lv.operator, "status": lv.status}
         for key, lv in LAUNCH_VEHICLE_CATALOG.items()

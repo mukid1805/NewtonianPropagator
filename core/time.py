@@ -1,48 +1,39 @@
-"""
-core/time.py - Time & Epoch Conversion Utilities for Astrodynamics
+r"""Time & Epoch Conversion Utilities for Astrodynamics.
+
 Supports conversions between UTC Gregorian datetime, Julian Date (JD),
 Modified Julian Date (MJD), and J2000.0 epoch offsets.
 """
-from datetime import datetime
-from typing import Union, Tuple
 
+from datetime import datetime
+from typing import Final, Union
 
 # Standard Astronomical Epoch Constants
-JD_J2000 = 2451545.0          # Julian Date of epoch J2000.0 (2000-01-01 12:00:00 TT)
-MJD_OFFSET = 2400000.5        # Offset between JD and standard MJD (JD - 2400000.5)
-MJD_J2000 = 51544.5           # Modified Julian Date of J2000.0
-DAYS_PER_JULIAN_CENTURY = 36525.0
-SECS_PER_DAY = 86400.0
+JD_J2000: Final[float] = 2451545.0
+MJD_OFFSET: Final[float] = 2400000.5
+MJD_J2000: Final[float] = 51544.5
+DAYS_PER_JULIAN_CENTURY: Final[float] = 36525.0
+SECS_PER_DAY: Final[float] = 86400.0
 
 
-def datetime_to_jd(
-    dt: datetime
-) -> float:
-    """
-    Converts a Python UTC datetime object to Julian Date (JD).
+def datetime_to_jd(dt: datetime) -> float:
+    r"""Convert a Python UTC datetime object to Julian Date (JD).
 
-    Parameters
-    ----------
-    dt : datetime
-        UTC Calendar datetime.
+    Args:
+        dt: UTC Calendar datetime.
 
-    Returns
-    -------
-    float
-        Julian Date (days).
+    Returns:
+        float: Julian Date in fractional days.
     """
     year = dt.year
     month = dt.month
     day = dt.day
 
-    # Fractional day from hours, minutes, seconds, microseconds
     frac_day = (dt.hour + dt.minute / 60.0 + (dt.second + dt.microsecond * 1e-6) / 3600.0) / 24.0
 
     if month <= 2:
         year -= 1
         month += 12
 
-    # Fliegel-Van Flandern algorithm
     a = year // 100
     b = 2 - a + (a // 4)
 
@@ -50,21 +41,14 @@ def datetime_to_jd(
     return float(jd)
 
 
-def jd_to_datetime(
-    jd: float
-) -> datetime:
-    """
-    Converts Julian Date (JD) back to a Python UTC datetime object.
+def jd_to_datetime(jd: float) -> datetime:
+    r"""Convert Julian Date (JD) back to a Python UTC datetime object.
 
-    Parameters
-    ----------
-    jd : float
-        Julian Date (days).
+    Args:
+        jd: Julian Date in fractional days.
 
-    Returns
-    -------
-    datetime
-        UTC Calendar datetime.
+    Returns:
+        datetime: UTC Calendar datetime representation.
     """
     jd_adjusted = jd + 0.5
     z = int(jd_adjusted)
@@ -95,7 +79,6 @@ def jd_to_datetime(
     else:
         year = c - 4715
 
-    # Extract time components
     total_seconds = frac_day * SECS_PER_DAY
     hours = int(total_seconds // 3600)
     total_seconds %= 3600
@@ -111,23 +94,20 @@ def jd_to_datetime(
     return datetime(year, month, day, hours, minutes, seconds, microseconds)
 
 
-def date_to_mjd2000(
-    date_val: Union[datetime, str, float]
-) -> float:
-    """
-    Converts input date representation to days elapsed since J2000.0 (MJD2000).
+def date_to_mjd2000(date_val: Union[datetime, str, float]) -> float:
+    r"""Convert input date representation to days elapsed since J2000.0 (MJD2000).
 
-    Parameters
-    ----------
-    date_val : datetime, str, or float
-        - If datetime: interpreted as UTC datetime.
-        - If str: parsed as ISO 8601 string (e.g., '2026-08-28 12:00:00').
-        - If float: treated as already Julian Date (JD).
+    Args:
+        date_val: Date representation to parse:
+            * `datetime`: Interpreted directly as UTC datetime.
+            * `str`: Parsed as an ISO 8601 string (e.g., `'2026-08-28 12:00:00'`).
+            * `float`: Treated as an existing Julian Date (JD).
 
-    Returns
-    -------
-    float
-        Days since J2000.0 epoch (2000-01-01 12:00:00 TT).
+    Returns:
+        float: Days elapsed since J2000.0 epoch (2000-01-01 12:00:00 TT).
+
+    Raises:
+        TypeError: If `date_val` is not a datetime, ISO string, or float.
     """
     if isinstance(date_val, str):
         dt = datetime.fromisoformat(date_val)
@@ -142,16 +122,26 @@ def date_to_mjd2000(
     return jd - JD_J2000
 
 
-def mjd2000_to_datetime(
-    mjd2000: float
-) -> datetime:
-    """Converts days since J2000.0 (MJD2000) to Python UTC datetime."""
+def mjd2000_to_datetime(mjd2000: float) -> datetime:
+    r"""Convert days since J2000.0 (MJD2000) to Python UTC datetime.
+
+    Args:
+        mjd2000: Days elapsed since J2000.0 epoch.
+
+    Returns:
+        datetime: UTC Calendar datetime representation.
+    """
     jd = mjd2000 + JD_J2000
     return jd_to_datetime(jd)
 
 
-def mjd2000_to_julian_centuries(
-    mjd2000: float
-) -> float:
-    """Converts days since J2000.0 to Julian centuries (T)."""
+def mjd2000_to_julian_centuries(mjd2000: float) -> float:
+    r"""Convert days since J2000.0 to Julian centuries ($T$).
+
+    Args:
+        mjd2000: Days elapsed since J2000.0 epoch.
+
+    Returns:
+        float: Julian centuries ($T$) elapsed since J2000.0.
+    """
     return mjd2000 / DAYS_PER_JULIAN_CENTURY

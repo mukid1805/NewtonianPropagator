@@ -1,17 +1,18 @@
+r"""High-accuracy Keplerian analytical planetary ephemeris.
+
+Provides analytical planetary state vectors and orbital geometry based on
+Standish / JPL secular variations of planetary elements (valid 1800–2050).
 """
-core/ephemeris.py - High-accuracy Keplerian analytical planetary ephemeris
-Based on Standish / JPL secular variations of planetary elements (1800-2050).
-"""
+
+from typing import Final, Tuple
 import numpy as np
-from typing import Tuple
 
 # Gravitational parameters (km^3/s^2) and Astronomical Unit (km)
-AU = 149597870.7
-MU_SUN = 1.32712440018e11
-OBLIQUITY_J2000 = np.radians(23.4392811)  # Earth mean obliquity
+AU: Final[float] = 149597870.7
+MU_SUN: Final[float] = 1.32712440018e11
+OBLIQUITY_J2000: Final[float] = float(np.radians(23.4392811))
 
 # Standish / JPL secular elements at J2000: [a (AU), e, i (deg), Om (deg), varpi (deg), L (deg)]
-# Rates are per Julian century (T = (MJD - 51544.5) / 36525.0)
 PLANET_DATA = {
     'mercury': {
         'mu': 22032.0, 'radius': 2439.7, 'soi_a': 0.387098 * AU, 'mass_ratio': 1.660e-7,
@@ -58,38 +59,36 @@ PLANET_DATA = {
         'base': [39.48168677, 0.24880766, 17.14175, 110.30347, 224.06676, 238.92881],
         'rates': [-0.00076912, 0.00006465, 11.07 / 3600, -37.33 / 3600, -132.25 / 3600, 522747.90 / 3600]
     }
-
 }
 
 
 def get_planet_state(
-        planet_name: str,
-        mjd2000: float,
-        frame: str = 'ecliptic'
+    planet_name: str,
+    mjd2000: float,
+    frame: str = 'ecliptic'
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Computes Heliocentric 3D position and velocity (km, km/s).
+    r"""Compute heliocentric 3D position and velocity vectors.
 
-    Parameters
-    ----------
-    planet_name : str
-        Name of planet ('mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto').
-    mjd2000 : float
-        Days elapsed since J2000 epoch (Jan 1, 2000 12:00 TT).
-    frame : str, default='ecliptic'
-        Target coordinate frame: 'ecliptic' or 'equatorial' (ICRF/J2000).
+    Args:
+        planet_name: Target celestial body identifier (`'mercury'`, `'venus'`,
+            `'earth'`, `'mars'`, `'jupiter'`, `'saturn'`, `'uranus'`,
+            `'neptune'`, or `'pluto'`).
+        mjd2000: Days elapsed since J2000.0 epoch (2000-01-01 12:00:00 TT).
+        frame: Target coordinate frame:
+            * `'ecliptic'`: Heliocentric Mean Ecliptic and Equinox of J2000.0.
+            * `'equatorial'`: Heliocentric ICRF / J2000.0 frame.
 
-    Returns
-    -------
-    r_vec : np.ndarray
-        Position vector (3,) [km].
-    v_vec : np.ndarray
-        Velocity vector (3,) [km/s].
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: A tuple `(r_vec, v_vec)` containing:
+            - **r_vec** (`np.ndarray`): Position vector $[x, y, z]$ of shape `(3,)` [$\text{km}$].
+            - **v_vec** (`np.ndarray`): Velocity vector $[v_x, v_y, v_z]$ of shape `(3,)` [$\text{km/s}$].
+
+    Raises:
+        KeyError: If `planet_name` is not in the planetary database.
     """
     p = PLANET_DATA[planet_name.lower()]
     t_centuries = mjd2000 / 36525.0
 
-    # Instantaneous Keplerian elements
     elem = [b + r * t_centuries for b, r in zip(p['base'], p['rates'])]
     a = elem[0] * AU
     e = elem[1]
@@ -101,7 +100,6 @@ def get_planet_state(
     omega = (varpi - raan) % (2.0 * np.pi)
     m_anom = (mean_long - varpi) % (2.0 * np.pi)
 
-    # Solve Kepler's equation for Eccentric Anomaly (E)
     e_anom = m_anom if e < 0.8 else np.pi
     for _ in range(15):
         f = e_anom - e * np.sin(e_anom) - m_anom
@@ -117,7 +115,6 @@ def get_planet_state(
     )
     r_mag = a * (1.0 - e * np.cos(e_anom))
 
-    # Perifocal coordinates
     r_pf = np.array([r_mag * np.cos(nu), r_mag * np.sin(nu), 0.0])
     p_orb = a * (1.0 - e ** 2)
     h = np.sqrt(MU_SUN * p_orb)
@@ -127,7 +124,6 @@ def get_planet_state(
         0.0
     ])
 
-    # Direct 3-1-3 Euler Direction Cosine Matrix (Perifocal -> Ecliptic)
     p_vec = np.array([
         np.cos(raan) * np.cos(omega) - np.sin(raan) * np.sin(omega) * np.cos(inc),
         np.sin(raan) * np.cos(omega) + np.cos(raan) * np.sin(omega) * np.cos(inc),
@@ -141,7 +137,6 @@ def get_planet_state(
     ])
 
     w_vec = np.cross(p_vec, q_vec)
-
     r_pf2ecl = np.column_stack([p_vec, q_vec, w_vec])
 
     r_ecl = r_pf2ecl @ r_pf
@@ -159,6 +154,20 @@ def get_planet_state(
 
 
 def get_soi_radius(planet_name: str) -> float:
-    """Computes Laplace Sphere of Influence radius (km)."""
+    r"""Compute Laplace Sphere of Influence (SOI) radius.
+
+    $$
+    r_{\text{SOI}} = a \left(\frac{m}{M}\right)^{0.4}
+    $$
+
+    Args:
+        planet_name: Target celestial body identifier (e.g., `'earth'`, `'mars'`).
+
+    Returns:
+        float: Sphere of influence radius in $\text{km}$.
+
+    Raises:
+        KeyError: If `planet_name` is not in the planetary database.
+    """
     p = PLANET_DATA[planet_name.lower()]
     return float(p['soi_a'] * (p['mass_ratio']) ** 0.4)
