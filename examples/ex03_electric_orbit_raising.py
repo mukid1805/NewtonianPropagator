@@ -21,7 +21,8 @@ def run():
     dt = 30.0
 
     print(f"Propagating Scenario 3 ({days}-Day Low-Thrust Electric Spiral)...")
-    times, states = engine.propagate(r0, v0, t_span=t_span, dt=dt, track_mass=True)
+    times, states = engine.propagate(r0, v0, t_span=t_span, dt=dt,method="rk4",
+    rtol=1e-8, atol=1e-10, track_mass=True)
 
     final_mass = states[-1, 6]
     final_alt = np.linalg.norm(states[-1, 0:3]) / 1000.0 - R_EARTH / 1000.0

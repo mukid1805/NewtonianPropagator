@@ -154,6 +154,11 @@ class SpacecraftPropagator:
         v = state[3:6]
         current_mass = float(state[6]) if len(state) >= 7 else self.mass
 
+        # Atmospheric Re-entry / Ground Impact Floor
+        r_mag = np.linalg.norm(r)
+        if r_mag <= (self.r_body + 80_000.0):  # Below 80 km re-entry interface
+            return np.zeros_like(state)
+
         # Central Newtonian gravity
         a_total = accel_earth_gravity(r)
 

@@ -77,7 +77,7 @@ def accel_j3_perturbation(r: np.ndarray) -> np.ndarray:
     With $s = \sin\phi = \frac{z}{\|\mathbf{r}\|}$:
 
     $$
-    \mathbf{a}_{J_3} = \frac{1}{2} \frac{J_3 \mu_{\oplus} R_{\oplus}^3}{\|\mathbf{r}\|^5}
+    \mathbf{a}_{J_3} = \frac{1}{2} \frac{J_3 \mu_{\oplus} R_{\oplus}^3}{\|\mathbf{r}\|^6}
     \begin{bmatrix}
     5 x \left(7s^3 - 3s\right) \\
     5 y \left(7s^3 - 3s\right) \\
@@ -95,11 +95,12 @@ def accel_j3_perturbation(r: np.ndarray) -> np.ndarray:
     r_mag = np.linalg.norm(r)
     s = z / r_mag
 
-    factor = 0.5 * J3_EARTH * G_EARTH * (R_EARTH ** 3) / (r_mag ** 5)
+    # Denominator power is (n + 3) = 6 for J3 to match SI dimensions (m/s^2)
+    factor = 0.5 * J3_EARTH * G_EARTH * (R_EARTH ** 3) / (r_mag ** 6)
 
     ax = 5.0 * factor * x * (7.0 * (s ** 3) - 3.0 * s)
     ay = 5.0 * factor * y * (7.0 * (s ** 3) - 3.0 * s)
-    az = factor * (35.0 * (s ** 4) - 30.0 * (s ** 2) + 3.0) * r_mag
+    az = factor * r_mag * (35.0 * (s ** 4) - 30.0 * (s ** 2) + 3.0)
 
     return np.array([ax, ay, az])
 
@@ -110,7 +111,7 @@ def accel_j4_perturbation(r: np.ndarray) -> np.ndarray:
     With $s = \sin\phi = \frac{z}{\|\mathbf{r}\|}$:
 
     $$
-    \mathbf{a}_{J_4} = \frac{5}{8} \frac{J_4 \mu_{\oplus} R_{\oplus}^4}{\|\mathbf{r}\|^6}
+    \mathbf{a}_{J_4} = \frac{5}{8} \frac{J_4 \mu_{\oplus} R_{\oplus}^4}{\|\mathbf{r}\|^7}
     \begin{bmatrix}
     x \left(3 - 42s^2 + 63s^4\right) \\
     y \left(3 - 42s^2 + 63s^4\right) \\
@@ -128,7 +129,8 @@ def accel_j4_perturbation(r: np.ndarray) -> np.ndarray:
     r_mag = np.linalg.norm(r)
     s = z / r_mag
 
-    factor = (5.0 / 8.0) * J4_EARTH * G_EARTH * (R_EARTH ** 4) / (r_mag ** 6)
+    # Denominator power is (n + 3) = 7 for J4 to match SI dimensions (m/s^2)
+    factor = (5.0 / 8.0) * J4_EARTH * G_EARTH * (R_EARTH ** 4) / (r_mag ** 7)
 
     term_xy = 3.0 - 42.0 * (s ** 2) + 63.0 * (s ** 4)
     term_z = 15.0 - 70.0 * (s ** 2) + 63.0 * (s ** 4)
@@ -138,7 +140,6 @@ def accel_j4_perturbation(r: np.ndarray) -> np.ndarray:
     az = factor * z * term_z
 
     return np.array([ax, ay, az])
-
 
 def rv_to_keplerian(r: np.ndarray, v: np.ndarray, mu: float = G_EARTH) -> Dict[str, float]:
     r"""Convert Cartesian state vectors $(\mathbf{r}, \mathbf{v})$ to Classical Orbital Elements (COE).
