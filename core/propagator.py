@@ -2,7 +2,7 @@ r"""Unified Spacecraft Numerical Propagation Engine.
 
 Supports 6-DOF $(\mathbf{r}, \mathbf{v})$ and 7-DOF $(\mathbf{r}, \mathbf{v}, m)$
 orbital trajectory simulation under primary Newtonian central-body gravitation,
-geopotential zonal harmonics ($J_2$–$J_4$), third-body lunar perturbations,
+geopotential zonal harmonics ($J_2$-$J_4$), third-body lunar perturbations,
 exponential atmospheric drag, cannonball Solar Radiation Pressure (SRP), and
 continuous or impulsive propulsive maneuvers.
 
@@ -11,7 +11,7 @@ Provides selectable numerical integration backends:
 - `'rk45'`: Adaptive step-size Dormand-Prince 5(4) with embedded LTE control.
 """
 
-from typing import Callable, Dict, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -40,18 +40,13 @@ class SpacecraftPropagator:
     r"""Unified orbital propagation engine supporting 6-DOF and 7-DOF dynamics.
 
     Propagates Cartesian state vectors in the Earth-Centered Inertial (ECI)
-    frame by assembling the total acceleration vector from environmental
-    perturbations and onboard propulsion systems:
+    frame by assembling the total acceleration vector:
 
-    $$
-    \ddot{\mathbf{r}} = \mathbf{a}_{\text{grav}} + \mathbf{a}_{J_2} + \mathbf{a}_{J_3} + \mathbf{a}_{J_4} + \mathbf{a}_{\text{moon}} + \mathbf{a}_{\text{drag}} + \mathbf{a}_{\text{srp}} + \mathbf{a}_{\text{thrust}}
-    $$
+    $$\ddot{\mathbf{r}} = \mathbf{a}_{\text{grav}} + \mathbf{a}_{\text{pert}} + \mathbf{a}_{\text{thrust}}$$
 
     and mass depletion dynamics:
 
-    $$
-    \dot{m} = -\frac{\|\mathbf{F}_{\text{thrust}}\|}{I_{\text{sp}} g_0}
-    $$
+    $$\dot{m} = -\frac{\|\mathbf{F}_{\text{thrust}}\|}{I_{\text{sp}} g_0}$$
     """
 
     def __init__(
@@ -75,34 +70,34 @@ class SpacecraftPropagator:
         area_srp: Optional[float] = None,
         thrust_mag: float = 0.0,
         thrust_steering_law: Optional[Callable[[float, np.ndarray, np.ndarray, float], np.ndarray]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
-        r"""Initialize the spacecraft configuration, perturbation flags, and physical parameters.
+        r"""Initialize spacecraft properties, perturbation toggles, and steering laws.
 
         Args:
-            mass: Dry/wet initial spacecraft mass $m$ [$\text{kg}$]. Defaults to `500.0`.
-            drag_area: Frontal aerodynamic reference area $A_{\text{drag}}$ [$\text{m}^2$]. Defaults to `2.0`.
-            cd: Dimensionless aerodynamic drag coefficient $C_d$. Defaults to `2.2`.
-            srp_area: Solar radiation pressure illuminated area $A_{\text{srp}}$ [$\text{m}^2$]. Defaults to `4.0`.
-            cr: Dimensionless radiation pressure reflectivity coefficient $C_r$. Defaults to `1.2`.
-            isp: Specific impulse $I_{\text{sp}}$ [$\text{s}$]. Defaults to `1800.0`.
-            use_j2: Enable $J_2$ Earth oblateness harmonic perturbation. Defaults to `True`.
-            use_j3: Enable $J_3$ Earth pear-shaped harmonic perturbation. Defaults to `False`.
-            use_j4: Enable $J_4$ Earth second-order oblateness harmonic perturbation. Defaults to `False`.
-            use_lunar: Enable third-body lunar gravitation perturbation. Defaults to `False`.
-            use_drag: Enable atmospheric drag acceleration. Defaults to `False`.
-            use_srp: Enable solar radiation pressure with cylindrical Earth shadowing. Defaults to `False`.
-            use_thrust: Enable active thruster firing. Defaults to `False`.
-            mu: Central body gravitational parameter $\mu$ [$\text{m}^3/\text{s}^2$]. Defaults to `G_EARTH`.
-            r_body: Central body mean volumetric radius $R$ [$\text{m}$]. Defaults to `R_EARTH`.
-            area_drag: Parameter alias for `drag_area`. If provided, overrides `drag_area`.
-            area_srp: Parameter alias for `srp_area`. If provided, overrides `srp_area`.
-            thrust_mag: Continuous thrust magnitude $T$ [$\text{N}$]. Defaults to `0.0`.
-            thrust_steering_law: User-supplied callable $\mathbf{f}(t, \mathbf{r}, \mathbf{v}, m) \to \mathbf{a}_{\text{thrust}}$. Defaults to `None`.
-            **kwargs: Additional backwards-compatibility keyword arguments.
+            mass: Dry or wet initial spacecraft mass in kilograms. Defaults to 500.0.
+            drag_area: Frontal aerodynamic drag reference area in square meters. Defaults to 2.0.
+            cd: Dimensionless aerodynamic drag coefficient. Defaults to 2.2.
+            srp_area: Solar radiation pressure illuminated area in square meters. Defaults to 4.0.
+            cr: Dimensionless radiation pressure reflectivity coefficient. Defaults to 1.2.
+            isp: Specific impulse in seconds. Defaults to 1800.0.
+            use_j2: Enable J2 oblateness harmonic perturbation. Defaults to True.
+            use_j3: Enable J3 pear-shaped harmonic perturbation. Defaults to False.
+            use_j4: Enable J4 second-order oblateness harmonic perturbation. Defaults to False.
+            use_lunar: Enable third-body lunar gravity perturbation. Defaults to False.
+            use_drag: Enable atmospheric drag acceleration. Defaults to False.
+            use_srp: Enable solar radiation pressure with cylindrical shadowing. Defaults to False.
+            use_thrust: Enable active thruster acceleration. Defaults to False.
+            mu: Central body gravitational parameter in m^3/s^2. Defaults to G_EARTH.
+            r_body: Central body mean radius in meters. Defaults to R_EARTH.
+            area_drag: Parameter alias for drag_area. Defaults to None.
+            area_srp: Parameter alias for srp_area. Defaults to None.
+            thrust_mag: Continuous thrust magnitude in Newtons. Defaults to 0.0.
+            thrust_steering_law: Optional callable returning thrust acceleration vector. Defaults to None.
+            **kwargs: Backward-compatibility keyword arguments.
 
         Raises:
-            ValueError: If `mass`, `isp`, `mu`, or `r_body` are non-positive.
+            ValueError: If mass, isp, mu, or r_body are non-positive.
         """
         if float(mass) <= 0.0:
             raise ValueError(f"Spacecraft initial mass must be positive, got {mass} kg.")
@@ -156,16 +151,16 @@ class SpacecraftPropagator:
         r"""Configure a fixed inertial directional burn over $[t_{\text{start}}, t_{\text{start}} + \Delta t]$.
 
         Args:
-            start_t: Burn ignition epoch $t_{\text{start}}$ [$\text{s}$].
-            duration: Total continuous burn duration $\Delta t$ [$\text{s}$].
-            thrust_vec: Applied inertial thrust vector $\mathbf{F}_{\text{thrust}}$ of shape `(3,)` [$\text{N}$].
-            isp: Optional override for specific impulse $I_{\text{sp}}$ [$\text{s}$].
+            start_t: Burn ignition epoch in seconds.
+            duration: Total continuous burn duration in seconds.
+            thrust_vec: Applied inertial thrust vector of shape `(3,)` in Newtons.
+            isp: Optional override for specific impulse in seconds. Defaults to None.
 
         Returns:
-            SpacecraftPropagator: Self reference for chained method execution.
+            SpacecraftPropagator: Self reference for method chaining.
 
         Raises:
-            ValueError: If `duration` is non-positive or `thrust_vec` does not have 3 elements.
+            ValueError: If duration is non-positive or thrust_vec does not have 3 elements.
         """
         thrust_arr = np.asarray(thrust_vec, dtype=np.float64)
         if thrust_arr.shape != (3,):
@@ -203,23 +198,21 @@ class SpacecraftPropagator:
         isp: Optional[float] = None,
         steering_law: Optional[Callable[[float, np.ndarray, np.ndarray, float], np.ndarray]] = None,
     ) -> "SpacecraftPropagator":
-        r"""Configure continuous prograde low thrust aligned with the instantaneous velocity vector.
+        r"""Configure continuous prograde low thrust aligned with instantaneous velocity.
 
-        $$
-        \mathbf{a}_{\text{thrust}} = \frac{T}{m} \hat{\mathbf{v}} = \frac{T}{m} \left(\frac{\mathbf{v}}{\|\mathbf{v}\|}\right)
-        $$
+        $$\mathbf{a}_{\text{thrust}} = \frac{T}{m} \hat{\mathbf{v}}$$
 
         Args:
-            thrust_magnitude: Continuous thrust force magnitude $T$ [$\text{N}$].
-            thrust_mag: Parameter alias for `thrust_magnitude`.
-            isp: Optional override for specific impulse $I_{\text{sp}}$ [$\text{s}$].
-            steering_law: Optional directional override steering function callback.
+            thrust_magnitude: Continuous thrust force magnitude in Newtons. Defaults to None.
+            thrust_mag: Parameter alias for thrust_magnitude. Defaults to None.
+            isp: Optional override for specific impulse in seconds. Defaults to None.
+            steering_law: Optional directional override steering function callback. Defaults to None.
 
         Returns:
-            SpacecraftPropagator: Self reference for chained method execution.
+            SpacecraftPropagator: Self reference for method chaining.
 
         Raises:
-            ValueError: If thrust magnitude or override `isp` is negative.
+            ValueError: If thrust magnitude is negative or override isp is non-positive.
         """
         mag = thrust_magnitude if thrust_magnitude is not None else (thrust_mag if thrust_mag is not None else 0.0)
         if float(mag) < 0.0:
@@ -247,16 +240,16 @@ class SpacecraftPropagator:
         r"""Unified wrapper for continuous low-thrust propulsion configuration.
 
         Args:
-            thrust_mag: Parameter alias for continuous thrust magnitude $T$ [$\text{N}$].
-            thrust_magnitude: Explicit continuous thrust magnitude $T$ [$\text{N}$].
-            isp: Optional override for specific impulse $I_{\text{sp}}$ [$\text{s}$].
-            steering_law: Custom steering law callback.
+            thrust_mag: Parameter alias for continuous thrust magnitude in Newtons. Defaults to None.
+            thrust_magnitude: Explicit continuous thrust magnitude in Newtons. Defaults to None.
+            isp: Optional override for specific impulse in seconds. Defaults to None.
+            steering_law: Custom steering law callback. Defaults to None.
 
         Returns:
-            SpacecraftPropagator: Self reference for chained method execution.
+            SpacecraftPropagator: Self reference for method chaining.
 
         Raises:
-            ValueError: If thrust magnitude or override `isp` is negative.
+            ValueError: If thrust magnitude is negative or override isp is non-positive.
         """
         return self.configure_electric_burn(
             thrust_magnitude=thrust_magnitude,
@@ -273,16 +266,14 @@ class SpacecraftPropagator:
         r"""Evaluate total state derivative vector $[d\mathbf{r}/dt, d\mathbf{v}/dt (, dm/dt)]^T$.
 
         Args:
-            t: Current epoch time [$\text{s}$].
-            state: Integrated state array of shape `(6,)` $(\mathbf{r}, \mathbf{v})$ or
-                `(7,)` $(\mathbf{r}, \mathbf{v}, m)$ in SI units.
+            t: Current epoch time in seconds.
+            state: Integrated state vector array of shape `(6,)` or `(7,)` in SI units.
 
         Returns:
-            np.ndarray: First-order kinematic and dynamic derivatives of shape `(6,)`
-                or `(7,)` matching the input state dimension.
+            np.ndarray: First-order derivatives of shape `(6,)` or `(7,)` matching input state dimension.
 
         Raises:
-            ValueError: If `state` has fewer than 6 elements.
+            ValueError: If state array has fewer than 6 elements.
         """
         if len(state) < 6:
             raise ValueError(f"State vector must contain at least 6 elements, got length {len(state)}.")
@@ -361,33 +352,33 @@ class SpacecraftPropagator:
         h_min: float = 1e-4,
         h_max: float = 86400.0,
         state0: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Tuple[np.ndarray, np.ndarray]:
         r"""Propagate Cartesian state vectors forward across the designated time duration.
 
         Args:
-            r0: Initial position vector $\mathbf{r}_0$ in the ECI frame of shape `(3,)` [$\text{m}$].
-            v0: Initial velocity vector $\mathbf{v}_0$ in the ECI frame of shape `(3,)` [$\text{m/s}$].
-            t_span: Total propagation duration [$\text{s}$]. Defaults to `86400.0` (1 day).
-            dt: Fixed integration step size or initial candidate step size $\Delta t$ [$\text{s}$]. Defaults to `10.0`.
-            track_mass: If `True`, tracks fuel consumption via 7-DOF dynamic equations. Defaults to `False`.
-            mass0: Initial vehicle mass override [$\text{kg}$]. If provided, forces 7-DOF propagation. Defaults to `None`.
-            method: Numerical integrator backend selection (`'rk4'` or `'rk45'`). Defaults to `'rk4'`.
-            rtol: Relative error tolerance for adaptive Dormand-Prince (`'rk45'`). Defaults to `1e-8`.
-            atol: Absolute error tolerance for adaptive Dormand-Prince (`'rk45'`). Defaults to `1e-10`.
-            h_min: Minimum allowable step size for adaptive integration [$\text{s}$]. Defaults to `1e-4`.
-            h_max: Maximum allowable step size for adaptive integration [$\text{s}$]. Defaults to `86400.0`.
-            state0: Pre-assembled initial state vector array $(\mathbf{r}_0, \mathbf{v}_0 [, m_0])$. Defaults to `None`.
-            **kwargs: Additional compatibility keyword arguments.
+            r0: Initial position vector in the ECI frame of shape `(3,)` in meters. Defaults to None.
+            v0: Initial velocity vector in the ECI frame of shape `(3,)` in m/s. Defaults to None.
+            t_span: Total propagation duration in seconds. Defaults to 86400.0.
+            dt: Fixed integration step size or initial candidate step size in seconds. Defaults to 10.0.
+            track_mass: If True, tracks fuel consumption via 7-DOF dynamic equations. Defaults to False.
+            mass0: Initial vehicle mass override in kilograms. Defaults to None.
+            method: Numerical integrator backend selection ('rk4' or 'rk45'). Defaults to 'rk4'.
+            rtol: Relative error tolerance for adaptive Dormand-Prince ('rk45'). Defaults to 1e-8.
+            atol: Absolute error tolerance for adaptive Dormand-Prince ('rk45'). Defaults to 1e-10.
+            h_min: Minimum allowable step size for adaptive integration in seconds. Defaults to 1e-4.
+            h_max: Maximum allowable step size for adaptive integration in seconds. Defaults to 86400.0.
+            state0: Pre-assembled initial state vector array `(r0, v0 [, m0])`. Defaults to None.
+            **kwargs: Additional backward-compatibility keyword arguments.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: A tuple `(times, states)` containing:
-                - **times** (`np.ndarray`): Discrete solution epochs of shape `(N,)` [$\text{s}$].
-                - **states** (`np.ndarray`): Propagated trajectory states of shape `(N, 6)` or `(N, 7)`.
+            Tuple containing:
+                - times (np.ndarray): Discrete solution epochs of shape `(N,)` in seconds.
+                - states (np.ndarray): Propagated trajectory states of shape `(N, 6)` or `(N, 7)`.
 
         Raises:
-            ValueError: If neither `state0` nor the `(r0, v0)` pair is provided, if `t_span` or `dt` is non-positive,
-                or if an unsupported integration `method` is requested.
+            ValueError: If neither state0 nor (r0, v0) is provided, if t_span or dt is non-positive,
+                or if an unsupported integration method is requested.
         """
         if float(t_span) <= 0.0:
             raise ValueError(f"Propagation duration t_span must be positive, got {t_span} s.")
@@ -483,10 +474,10 @@ class SpacecraftPropagator:
 
         Args:
             states: Position and velocity state vector history array of shape `(N, 6)` or `(N, 7)`.
-            title: Matplotlib figure title string. Defaults to `'Trajectory'`.
+            title: Matplotlib figure title string. Defaults to 'Trajectory'.
 
         Raises:
-            ValueError: If `states` does not have shape `(N, M)` with $M \ge 3$.
+            ValueError: If states array does not have 2 dimensions or fewer than 3 columns.
         """
         states_arr = np.asarray(states, dtype=np.float64)
         if states_arr.ndim != 2 or states_arr.shape[1] < 3:
