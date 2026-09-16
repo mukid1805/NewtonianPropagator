@@ -1,19 +1,19 @@
-r"""
-Unified Spacecraft Numerical Propagation Engine.
+r"""Unified Spacecraft Numerical Propagation Engine.
 
 Supports 6-DOF $(\mathbf{r}, \mathbf{v})$ and 7-DOF $(\mathbf{r}, \mathbf{v}, m)$
-orbital trajectory simulation under primary two-body gravity, zonal harmonics
-($J_2$–$J_4$), third-body lunar perturbations, atmospheric drag, solar radiation
-pressure (SRP), and continuous or impulsive thrust.
+orbital trajectory simulation under primary Newtonian central-body gravitation,
+geopotential zonal harmonics ($J_2$–$J_4$), third-body lunar perturbations,
+exponential atmospheric drag, cannonball Solar Radiation Pressure (SRP), and
+continuous or impulsive propulsive maneuvers.
 
 Provides selectable numerical integration backends:
-- `'rk4'`: Fixed-step 4th-order Runge-Kutta.
+- `'rk4'`: Fixed-step classical 4th-order Runge-Kutta.
 - `'rk45'`: Adaptive step-size Dormand-Prince 5(4) with embedded LTE control.
 """
 
-from typing import Callable, Optional, Tuple, Union
-import numpy as np
+from typing import Callable, Dict, Optional, Tuple, Union
 import matplotlib.pyplot as plt
+import numpy as np
 
 from core.constants import G0, G_EARTH, R_EARTH
 from core.forces import (
@@ -27,11 +27,32 @@ from core.forces import (
     accel_lunar_gravity,
     accel_solar_radiation_pressure,
 )
-from core.integrators import rk4, rk4_step, rk45_adaptive
+from core.integrators import rk4_step, rk45_adaptive
+
+# ============================================================================
+# PROPAGATION ENGINE CONSTANTS & THRESHOLDS
+# ============================================================================
+REENTRY_ALTITUDE_THRESHOLD: float = 80_000.0  # Atmospheric re-entry floor [m]
+MINIMUM_PROPULSION_MASS: float = 20.0        # Dry structural cutoff mass [kg]
 
 
 class SpacecraftPropagator:
-    r"""Unified orbital propagation engine supporting 6-DOF and 7-DOF dynamics."""
+    r"""Unified orbital propagation engine supporting 6-DOF and 7-DOF dynamics.
+
+    Propagates Cartesian state vectors in the Earth-Centered Inertial (ECI)
+    frame by assembling the total acceleration vector from environmental
+    perturbations and onboard propulsion systems:
+
+    $$
+    \ddot{\mathbf{r}} = \mathbf{a}_{\text{grav}} + \mathbf{a}_{J_2} + \mathbf{a}_{J_3} + \mathbf{a}_{J_4} + \mathbf{a}_{\text{moon}} + \mathbf{a}_{\text{drag}} + \mathbf{a}_{\text{srp}} + \mathbf{a}_{\text{thrust}}
+    $$
+
+    and mass depletion dynamics:
+
+    $$
+    \dot{m} = -\frac{\|\mathbf{F}_{\text{thrust}}\|}{I_{\text{sp}} g_0}
+    $$
+    """
 
     def __init__(
         self,
@@ -55,34 +76,75 @@ class SpacecraftPropagator:
         thrust_mag: float = 0.0,
         thrust_steering_law: Optional[Callable[[float, np.ndarray, np.ndarray, float], np.ndarray]] = None,
         **kwargs,
-    ):
-        self.mass = float(mass)
-        self.cd = float(cd)
-        self.cr = float(cr)
-        self.isp = float(isp)
-        self.mu = float(mu)
-        self.r_body = float(r_body)
+    ) -> None:
+        r"""Initialize the spacecraft configuration, perturbation flags, and physical parameters.
 
-        # Handle alias compatibility between old and new names
-        self.drag_area = float(area_drag if area_drag is not None else drag_area)
-        self.area_drag = self.drag_area
-        self.srp_area = float(area_srp if area_srp is not None else srp_area)
-        self.area_srp = self.srp_area
+        Args:
+            mass: Dry/wet initial spacecraft mass $m$ [$\text{kg}$]. Defaults to `500.0`.
+            drag_area: Frontal aerodynamic reference area $A_{\text{drag}}$ [$\text{m}^2$]. Defaults to `2.0`.
+            cd: Dimensionless aerodynamic drag coefficient $C_d$. Defaults to `2.2`.
+            srp_area: Solar radiation pressure illuminated area $A_{\text{srp}}$ [$\text{m}^2$]. Defaults to `4.0`.
+            cr: Dimensionless radiation pressure reflectivity coefficient $C_r$. Defaults to `1.2`.
+            isp: Specific impulse $I_{\text{sp}}$ [$\text{s}$]. Defaults to `1800.0`.
+            use_j2: Enable $J_2$ Earth oblateness harmonic perturbation. Defaults to `True`.
+            use_j3: Enable $J_3$ Earth pear-shaped harmonic perturbation. Defaults to `False`.
+            use_j4: Enable $J_4$ Earth second-order oblateness harmonic perturbation. Defaults to `False`.
+            use_lunar: Enable third-body lunar gravitation perturbation. Defaults to `False`.
+            use_drag: Enable atmospheric drag acceleration. Defaults to `False`.
+            use_srp: Enable solar radiation pressure with cylindrical Earth shadowing. Defaults to `False`.
+            use_thrust: Enable active thruster firing. Defaults to `False`.
+            mu: Central body gravitational parameter $\mu$ [$\text{m}^3/\text{s}^2$]. Defaults to `G_EARTH`.
+            r_body: Central body mean volumetric radius $R$ [$\text{m}$]. Defaults to `R_EARTH`.
+            area_drag: Parameter alias for `drag_area`. If provided, overrides `drag_area`.
+            area_srp: Parameter alias for `srp_area`. If provided, overrides `srp_area`.
+            thrust_mag: Continuous thrust magnitude $T$ [$\text{N}$]. Defaults to `0.0`.
+            thrust_steering_law: User-supplied callable $\mathbf{f}(t, \mathbf{r}, \mathbf{v}, m) \to \mathbf{a}_{\text{thrust}}$. Defaults to `None`.
+            **kwargs: Additional backwards-compatibility keyword arguments.
 
-        # Perturbation flags
-        self.use_j2 = use_j2
-        self.use_j3 = use_j3
-        self.use_j4 = use_j4
-        self.use_lunar = use_lunar
-        self.use_drag = use_drag
-        self.use_srp = use_srp
-        self.use_thrust = use_thrust
+        Raises:
+            ValueError: If `mass`, `isp`, `mu`, or `r_body` are non-positive.
+        """
+        if float(mass) <= 0.0:
+            raise ValueError(f"Spacecraft initial mass must be positive, got {mass} kg.")
+        if float(isp) <= 0.0:
+            raise ValueError(f"Specific impulse must be positive, got {isp} s.")
+        if float(mu) <= 0.0:
+            raise ValueError(f"Gravitational parameter mu must be positive, got {mu}.")
+        if float(r_body) <= 0.0:
+            raise ValueError(f"Central body radius must be positive, got {r_body} m.")
 
-        # Thrust modes & steering
-        self.thrust_mode = "none"
-        self.thrust_params = {}
-        self.thrust_mag = float(thrust_mag)
-        self.thrust_steering_law = thrust_steering_law
+        self.mass: float = float(mass)
+        self.cd: float = float(cd)
+        self.cr: float = float(cr)
+        self.isp: float = float(isp)
+        self.mu: float = float(mu)
+        self.r_body: float = float(r_body)
+
+        # Handle alias compatibility between area parameter names
+        self.drag_area: float = float(area_drag if area_drag is not None else drag_area)
+        self.area_drag: float = self.drag_area
+        self.srp_area: float = float(area_srp if area_srp is not None else srp_area)
+        self.area_srp: float = self.srp_area
+
+        # Force perturbation flags
+        self.use_j2: bool = bool(use_j2)
+        self.use_j3: bool = bool(use_j3)
+        self.use_j4: bool = bool(use_j4)
+        self.use_lunar: bool = bool(use_lunar)
+        self.use_drag: bool = bool(use_drag)
+        self.use_srp: bool = bool(use_srp)
+        self.use_thrust: bool = bool(use_thrust)
+
+        # Propulsion state, guidance configuration, and status monitors
+        self.thrust_mode: str = "none"
+        self.thrust_params: Dict[str, Union[float, np.ndarray]] = {}
+        self.thrust_mag: float = float(thrust_mag)
+        self.thrust_steering_law: Optional[Callable[[float, np.ndarray, np.ndarray, float], np.ndarray]] = thrust_steering_law
+        self.reentry_detected: bool = False
+
+    # ========================================================================
+    # PROPULSION CONFIGURATION
+    # ========================================================================
 
     def configure_fixed_burn(
         self,
@@ -91,8 +153,26 @@ class SpacecraftPropagator:
         thrust_vec: np.ndarray,
         isp: Optional[float] = None,
     ) -> "SpacecraftPropagator":
-        r"""Configure an inertial directional burn over $[t_{\text{start}}, t_{\text{start}} + \Delta t]$."""
+        r"""Configure a fixed inertial directional burn over $[t_{\text{start}}, t_{\text{start}} + \Delta t]$.
+
+        Args:
+            start_t: Burn ignition epoch $t_{\text{start}}$ [$\text{s}$].
+            duration: Total continuous burn duration $\Delta t$ [$\text{s}$].
+            thrust_vec: Applied inertial thrust vector $\mathbf{F}_{\text{thrust}}$ of shape `(3,)` [$\text{N}$].
+            isp: Optional override for specific impulse $I_{\text{sp}}$ [$\text{s}$].
+
+        Returns:
+            SpacecraftPropagator: Self reference for chained method execution.
+
+        Raises:
+            ValueError: If `duration` is non-positive or `thrust_vec` does not have 3 elements.
+        """
         thrust_arr = np.asarray(thrust_vec, dtype=np.float64)
+        if thrust_arr.shape != (3,):
+            raise ValueError(f"thrust_vec must be a 3D vector, got shape {thrust_arr.shape}.")
+        if float(duration) <= 0.0:
+            raise ValueError(f"Burn duration must be positive, got {duration} s.")
+
         self.use_thrust = True
         self.thrust_mode = "fixed"
         self.thrust_params = {
@@ -102,12 +182,14 @@ class SpacecraftPropagator:
         }
         self.thrust_mag = float(np.linalg.norm(thrust_arr))
         if isp is not None:
+            if float(isp) <= 0.0:
+                raise ValueError(f"Override specific impulse must be positive, got {isp} s.")
             self.isp = float(isp)
 
         t_end = float(start_t + duration)
 
         def _fixed_burn_steering(t: float, r: np.ndarray, v: np.ndarray, mass: float) -> np.ndarray:
-            if start_t <= t <= t_end and mass > 20.0:
+            if start_t <= t <= t_end and mass > MINIMUM_PROPULSION_MASS:
                 return thrust_arr / mass
             return np.zeros(3, dtype=np.float64)
 
@@ -121,8 +203,30 @@ class SpacecraftPropagator:
         isp: Optional[float] = None,
         steering_law: Optional[Callable[[float, np.ndarray, np.ndarray, float], np.ndarray]] = None,
     ) -> "SpacecraftPropagator":
-        r"""Configure continuous prograde low thrust ($T$ in Newtons)."""
+        r"""Configure continuous prograde low thrust aligned with the instantaneous velocity vector.
+
+        $$
+        \mathbf{a}_{\text{thrust}} = \frac{T}{m} \hat{\mathbf{v}} = \frac{T}{m} \left(\frac{\mathbf{v}}{\|\mathbf{v}\|}\right)
+        $$
+
+        Args:
+            thrust_magnitude: Continuous thrust force magnitude $T$ [$\text{N}$].
+            thrust_mag: Parameter alias for `thrust_magnitude`.
+            isp: Optional override for specific impulse $I_{\text{sp}}$ [$\text{s}$].
+            steering_law: Optional directional override steering function callback.
+
+        Returns:
+            SpacecraftPropagator: Self reference for chained method execution.
+
+        Raises:
+            ValueError: If thrust magnitude or override `isp` is negative.
+        """
         mag = thrust_magnitude if thrust_magnitude is not None else (thrust_mag if thrust_mag is not None else 0.0)
+        if float(mag) < 0.0:
+            raise ValueError(f"Thrust magnitude must be non-negative, got {mag} N.")
+        if isp is not None and float(isp) <= 0.0:
+            raise ValueError(f"Override specific impulse must be positive, got {isp} s.")
+
         self.use_thrust = True
         self.thrust_mode = "electric_prograde"
         self.thrust_mag = float(mag)
@@ -140,7 +244,20 @@ class SpacecraftPropagator:
         isp: Optional[float] = None,
         steering_law: Optional[Callable[[float, np.ndarray, np.ndarray, float], np.ndarray]] = None,
     ) -> "SpacecraftPropagator":
-        r"""Unified wrapper for low-thrust configuration."""
+        r"""Unified wrapper for continuous low-thrust propulsion configuration.
+
+        Args:
+            thrust_mag: Parameter alias for continuous thrust magnitude $T$ [$\text{N}$].
+            thrust_magnitude: Explicit continuous thrust magnitude $T$ [$\text{N}$].
+            isp: Optional override for specific impulse $I_{\text{sp}}$ [$\text{s}$].
+            steering_law: Custom steering law callback.
+
+        Returns:
+            SpacecraftPropagator: Self reference for chained method execution.
+
+        Raises:
+            ValueError: If thrust magnitude or override `isp` is negative.
+        """
         return self.configure_electric_burn(
             thrust_magnitude=thrust_magnitude,
             thrust_mag=thrust_mag,
@@ -148,21 +265,42 @@ class SpacecraftPropagator:
             steering_law=steering_law,
         )
 
+    # ========================================================================
+    # STATE VECTOR DERIVATIVE JUNCTION
+    # ========================================================================
+
     def derivatives(self, t: float, state: np.ndarray) -> np.ndarray:
-        r"""Evaluate total state derivative vector $[d\mathbf{r}/dt, d\mathbf{v}/dt (, dm/dt)]^T$."""
+        r"""Evaluate total state derivative vector $[d\mathbf{r}/dt, d\mathbf{v}/dt (, dm/dt)]^T$.
+
+        Args:
+            t: Current epoch time [$\text{s}$].
+            state: Integrated state array of shape `(6,)` $(\mathbf{r}, \mathbf{v})$ or
+                `(7,)` $(\mathbf{r}, \mathbf{v}, m)$ in SI units.
+
+        Returns:
+            np.ndarray: First-order kinematic and dynamic derivatives of shape `(6,)`
+                or `(7,)` matching the input state dimension.
+
+        Raises:
+            ValueError: If `state` has fewer than 6 elements.
+        """
+        if len(state) < 6:
+            raise ValueError(f"State vector must contain at least 6 elements, got length {len(state)}.")
+
         r = state[0:3]
         v = state[3:6]
         current_mass = float(state[6]) if len(state) >= 7 else self.mass
 
-        # Atmospheric Re-entry / Ground Impact Floor
+        # Atmospheric Re-entry / Ground Impact Floor (80 km boundary interface)
         r_mag = np.linalg.norm(r)
-        if r_mag <= (self.r_body + 80_000.0):  # Below 80 km re-entry interface
+        if r_mag <= (self.r_body + REENTRY_ALTITUDE_THRESHOLD):
+            self.reentry_detected = True
             return np.zeros_like(state)
 
-        # Central Newtonian gravity
+        # Primary Newtonian two-body gravitation
         a_total = accel_earth_gravity(r)
 
-        # Superposition of Perturbations
+        # Superposition of Geopotential & Environmental Perturbations
         if self.use_j2:
             a_total = a_total + accel_j2_perturbation(r)
         if self.use_j3:
@@ -176,12 +314,12 @@ class SpacecraftPropagator:
         if self.use_srp:
             a_total = a_total + accel_solar_radiation_pressure(r, self.cr, self.srp_area, current_mass)
 
-        # Thrust & Mass Depletion
+        # Propulsive Thrust Acceleration & Mass Depletion
         m_dot = 0.0
         if self.use_thrust or self.thrust_mode != "none":
             if self.thrust_steering_law is not None:
                 a_total = a_total + self.thrust_steering_law(t, r, v, current_mass)
-                if self.thrust_mag > 0.0 and current_mass > 20.0:
+                if self.thrust_mag > 0.0 and current_mass > MINIMUM_PROPULSION_MASS:
                     m_dot = -self.thrust_mag / (G0 * self.isp)
             elif self.thrust_mode == "fixed":
                 a_total = a_total + accel_fixed_thrust(
@@ -191,19 +329,23 @@ class SpacecraftPropagator:
                     self.thrust_params["vec"],
                     current_mass,
                 )
-                start_t = self.thrust_params["start_t"]
-                t_end = start_t + self.thrust_params["duration"]
-                if start_t <= t <= t_end and current_mass > 20.0:
+                start_t = float(self.thrust_params["start_t"])
+                t_end = start_t + float(self.thrust_params["duration"])
+                if start_t <= t <= t_end and current_mass > MINIMUM_PROPULSION_MASS:
                     m_dot = -self.thrust_mag / (G0 * self.isp)
             elif self.thrust_mode == "electric_prograde":
-                t_mag = self.thrust_params.get("thrust", self.thrust_mag)
-                if current_mass > 20.0 and t_mag > 0.0:
+                t_mag = float(self.thrust_params.get("thrust", self.thrust_mag))
+                if current_mass > MINIMUM_PROPULSION_MASS and t_mag > 0.0:
                     a_total = a_total + accel_electric_prograde(v, t_mag, current_mass)
                     m_dot = -t_mag / (G0 * self.isp)
 
         if len(state) >= 7:
             return np.concatenate((v, a_total, [m_dot]))
         return np.concatenate((v, a_total))
+
+    # ========================================================================
+    # NUMERICAL INTEGRATION
+    # ========================================================================
 
     def propagate(
         self,
@@ -221,9 +363,41 @@ class SpacecraftPropagator:
         state0: Optional[np.ndarray] = None,
         **kwargs,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        r"""Propagate state vectors across the designated duration."""
+        r"""Propagate Cartesian state vectors forward across the designated time duration.
+
+        Args:
+            r0: Initial position vector $\mathbf{r}_0$ in the ECI frame of shape `(3,)` [$\text{m}$].
+            v0: Initial velocity vector $\mathbf{v}_0$ in the ECI frame of shape `(3,)` [$\text{m/s}$].
+            t_span: Total propagation duration [$\text{s}$]. Defaults to `86400.0` (1 day).
+            dt: Fixed integration step size or initial candidate step size $\Delta t$ [$\text{s}$]. Defaults to `10.0`.
+            track_mass: If `True`, tracks fuel consumption via 7-DOF dynamic equations. Defaults to `False`.
+            mass0: Initial vehicle mass override [$\text{kg}$]. If provided, forces 7-DOF propagation. Defaults to `None`.
+            method: Numerical integrator backend selection (`'rk4'` or `'rk45'`). Defaults to `'rk4'`.
+            rtol: Relative error tolerance for adaptive Dormand-Prince (`'rk45'`). Defaults to `1e-8`.
+            atol: Absolute error tolerance for adaptive Dormand-Prince (`'rk45'`). Defaults to `1e-10`.
+            h_min: Minimum allowable step size for adaptive integration [$\text{s}$]. Defaults to `1e-4`.
+            h_max: Maximum allowable step size for adaptive integration [$\text{s}$]. Defaults to `86400.0`.
+            state0: Pre-assembled initial state vector array $(\mathbf{r}_0, \mathbf{v}_0 [, m_0])$. Defaults to `None`.
+            **kwargs: Additional compatibility keyword arguments.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: A tuple `(times, states)` containing:
+                - **times** (`np.ndarray`): Discrete solution epochs of shape `(N,)` [$\text{s}$].
+                - **states** (`np.ndarray`): Propagated trajectory states of shape `(N, 6)` or `(N, 7)`.
+
+        Raises:
+            ValueError: If neither `state0` nor the `(r0, v0)` pair is provided, if `t_span` or `dt` is non-positive,
+                or if an unsupported integration `method` is requested.
+        """
+        if float(t_span) <= 0.0:
+            raise ValueError(f"Propagation duration t_span must be positive, got {t_span} s.")
+        if float(dt) <= 0.0:
+            raise ValueError(f"Integration time step dt must be positive, got {dt} s.")
+
         if state0 is not None:
             state0_arr = np.asarray(state0, dtype=np.float64)
+            if len(state0_arr) < 6:
+                raise ValueError(f"state0 must contain at least 6 elements, got shape {state0_arr.shape}.")
             r0_arr = state0_arr[0:3]
             v0_arr = state0_arr[3:6]
             if len(state0_arr) >= 7:
@@ -231,9 +405,11 @@ class SpacecraftPropagator:
                 mass0 = float(state0_arr[6])
         else:
             if r0 is None or v0 is None:
-                raise ValueError("Must provide either (r0, v0) or combined state0.")
+                raise ValueError("Must provide either (r0, v0) state vectors or combined state0.")
             r0_arr = np.asarray(r0, dtype=np.float64)
             v0_arr = np.asarray(v0, dtype=np.float64)
+            if r0_arr.shape != (3,) or v0_arr.shape != (3,):
+                raise ValueError(f"r0 and v0 must each have shape (3,), got r0={r0_arr.shape} and v0={v0_arr.shape}.")
 
         is_7dof = track_mass or (mass0 is not None)
         initial_mass = float(mass0) if mass0 is not None else self.mass
@@ -250,17 +426,28 @@ class SpacecraftPropagator:
             times = np.linspace(0.0, float(t_span), num_steps)
             states = np.zeros((num_steps, len(initial_state)), dtype=np.float64)
             states[0] = initial_state
+            self.reentry_detected = False
 
             actual_dt = times[1] - times[0] if num_steps > 1 else float(dt)
             for i in range(1, num_steps):
                 states[i] = rk4_step(
                     self.derivatives, times[i - 1], states[i - 1], actual_dt
                 )
+                r_step_mag = np.linalg.norm(states[i, 0:3])
+                if r_step_mag <= (self.r_body + REENTRY_ALTITUDE_THRESHOLD):
+                    self.reentry_detected = True
+                    altitude_km = (r_step_mag - self.r_body) / 1000.0
+                    print(
+                        f"\n[WARNING] Simulation terminated early at t = {times[i]:.1f} s ({times[i] / 86400.0:.2f} days): "
+                        f"spacecraft experienced atmospheric re-entry (altitude = {altitude_km:.2f} km <= {REENTRY_ALTITUDE_THRESHOLD / 1000.0:.1f} km)."
+                    )
+                    return times[: i + 1], states[: i + 1]
 
             return times, states
 
         elif chosen_method in ("rk45", "dopri5"):
-            return rk45_adaptive(
+            self.reentry_detected = False
+            t_hist, y_hist = rk45_adaptive(
                 derivs_func=self.derivatives,
                 t_span=(0.0, float(t_span)),
                 y0=initial_state,
@@ -270,13 +457,41 @@ class SpacecraftPropagator:
                 h_min=float(h_min),
                 h_max=float(h_max),
             )
+            r_hist_mag = np.linalg.norm(y_hist[:, 0:3], axis=1)
+            below_floor = np.where(r_hist_mag <= (self.r_body + REENTRY_ALTITUDE_THRESHOLD))[0]
+            if len(below_floor) > 0:
+                self.reentry_detected = True
+                first_impact = below_floor[0]
+                t_hist = t_hist[: first_impact + 1]
+                y_hist = y_hist[: first_impact + 1]
+                altitude_km = (r_hist_mag[first_impact] - self.r_body) / 1000.0
+                print(
+                    f"\n[WARNING] Simulation terminated early at t = {t_hist[-1]:.1f} s ({t_hist[-1] / 86400.0:.2f} days): "
+                    f"spacecraft experienced atmospheric re-entry (altitude = {altitude_km:.2f} km <= {REENTRY_ALTITUDE_THRESHOLD / 1000.0:.1f} km)."
+                )
+            return t_hist, y_hist
         else:
             raise ValueError(f"Unsupported numerical integration method '{method}'. Choose 'rk4' or 'rk45'.")
 
+    # ========================================================================
+    # TRAJECTORY VISUALIZATION
+    # ========================================================================
+
     @staticmethod
     def plot_3d(states: np.ndarray, title: str = "Trajectory") -> None:
-        r"""Plot the computed 3D orbit trajectory around a scaled Earth sphere."""
-        states_arr = np.asarray(states)
+        r"""Plot the computed 3D Cartesian orbit trajectory around a scaled Earth wireframe sphere.
+
+        Args:
+            states: Position and velocity state vector history array of shape `(N, 6)` or `(N, 7)`.
+            title: Matplotlib figure title string. Defaults to `'Trajectory'`.
+
+        Raises:
+            ValueError: If `states` does not have shape `(N, M)` with $M \ge 3$.
+        """
+        states_arr = np.asarray(states, dtype=np.float64)
+        if states_arr.ndim != 2 or states_arr.shape[1] < 3:
+            raise ValueError(f"states must have shape (N, M) with M >= 3, got shape {states_arr.shape}.")
+
         x_km = states_arr[:, 0] / 1000.0
         y_km = states_arr[:, 1] / 1000.0
         z_km = states_arr[:, 2] / 1000.0
@@ -284,7 +499,7 @@ class SpacecraftPropagator:
         fig = plt.figure(figsize=(10.0, 8.0))
         ax = fig.add_subplot(111, projection="3d")
 
-        # Earth wireframe sphere
+        # Earth wireframe sphere reference
         r_earth_km = R_EARTH / 1000.0
         u, v = np.mgrid[0 : 2 * np.pi : 30j, 0 : np.pi : 15j]
         ax.plot_wireframe(
@@ -296,12 +511,12 @@ class SpacecraftPropagator:
             label="Earth",
         )
 
-        # Orbit trajectory
+        # Orbit trajectory curve
         ax.plot(x_km, y_km, z_km, color="crimson", linewidth=1.5, label="Trajectory")
         ax.scatter(x_km[0], y_km[0], z_km[0], color="forestgreen", s=50, label="Start")
         ax.scatter(x_km[-1], y_km[-1], z_km[-1], color="black", s=50, label="End")
 
-        # Equal aspect ratio scaling
+        # Equal aspect ratio scaling across all 3 Cartesian axes
         max_r = np.array([x_km.max() - x_km.min(), y_km.max() - y_km.min(), z_km.max() - z_km.min()]).max() / 2.0
         mid_x = (x_km.max() + x_km.min()) * 0.5
         mid_y = (y_km.max() + y_km.min()) * 0.5
