@@ -10,7 +10,8 @@ from examples import (
     ex05_satellite_swarm_lvlh as ex5,
     ex06_cislunar_free_return as ex6,
     ex07_earth_mars_transfer as ex7,
-    ex08_gravity_assist_transfer as ex8
+    ex08_gravity_assist_transfer as ex8, 
+    ex09_rendezvous_targeting as ex9
 )
 
 
@@ -26,7 +27,8 @@ def print_menu():
     print("6. Scenario 6: Cislunar Free-Return Trajectory & Lagrange Points")
     print("7. Scenario 7: Earth-to-Mars Interplanetary Mission Design & Flight Dynamics")
     print("8. Scenario 8: Multi-Leg & Gravity Assist Transfers (Earth-Venus-Mars)")
-    print("9. Exit")
+    print("9. Scenario 9: Two-Impulse Orbital Rendezvous and Docking")
+    print("x. Exit")
     print("=" * 65)
 
 
@@ -50,8 +52,10 @@ def main():
             ex7.run()
         elif choice == '8':
             ex8.run()
-
         elif choice == '9':
+            ex9.run()
+
+        elif choice == 'x':
             print("Exiting.")
             sys.exit(0)
         else:

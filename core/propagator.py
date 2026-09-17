@@ -1,10 +1,10 @@
 r"""Unified Spacecraft Numerical Propagation Engine.
 
-Supports 6-DOF $(\mathbf{r}, \mathbf{v})$ and 7-DOF $(\mathbf{r}, \mathbf{v}, m)$
-orbital trajectory simulation under primary Newtonian central-body gravitation,
-geopotential zonal harmonics ($J_2$-$J_4$), third-body lunar perturbations,
-exponential atmospheric drag, cannonball Solar Radiation Pressure (SRP), and
-continuous or impulsive propulsive maneuvers.
+Supports 6-DOF $(\mathbf{r}, \mathbf{v})$, 7-DOF $(\mathbf{r}, \mathbf{v}, m)$,
+and 42-DOF $(\mathbf{r}, \mathbf{v}, \Phi)$ trajectory simulation under primary
+Newtonian gravitation, zonal harmonics ($J_2$–$J_4$), third-body lunar
+perturbations, exponential atmospheric drag, cannonball Solar Radiation
+Pressure (SRP), and propulsive manoeuvres.
 
 Provides selectable numerical integration backends:
 - `'rk4'`: Fixed-step classical 4th-order Runge-Kutta.
@@ -26,23 +26,28 @@ from core.forces import (
     accel_j4_perturbation,
     accel_lunar_gravity,
     accel_solar_radiation_pressure,
+    gravity_gradient_tensor,
 )
 from core.integrators import rk4_step, rk45_adaptive
 
 # ============================================================================
 # PROPAGATION ENGINE CONSTANTS & THRESHOLDS
 # ============================================================================
-REENTRY_ALTITUDE_THRESHOLD: float = 80_000.0  # Atmospheric re-entry floor [m]
-MINIMUM_PROPULSION_MASS: float = 20.0        # Dry structural cutoff mass [kg]
+REENTRY_ALTITUDE_THRESHOLD: float = 80_000.0  # Atmospheric re-entry boundary interface [m]
+MINIMUM_PROPULSION_MASS: float = 20.0        # Structural cutoff limit [kg]
 
 
 class SpacecraftPropagator:
-    r"""Unified orbital propagation engine supporting 6-DOF and 7-DOF dynamics.
+    r"""Unified orbital propagation engine supporting 6-DOF, 7-DOF, and 42-DOF dynamics.
 
-    Propagates Cartesian state vectors in the Earth-Centered Inertial (ECI)
-    frame by assembling the total acceleration vector:
+    Propagates Cartesian state vectors in the Earth-Centred Inertial (ECI)
+    frame by assembling the acceleration vector:
 
     $$\ddot{\mathbf{r}} = \mathbf{a}_{\text{grav}} + \mathbf{a}_{\text{pert}} + \mathbf{a}_{\text{thrust}}$$
+
+    coupled variational state equations:
+
+    $$\dot{\Phi}(t, t_0) = \mathbf{A}(t) \Phi(t, t_0)$$
 
     and mass depletion dynamics:
 
@@ -72,13 +77,13 @@ class SpacecraftPropagator:
         thrust_steering_law: Optional[Callable[[float, np.ndarray, np.ndarray, float], np.ndarray]] = None,
         **kwargs: Any,
     ) -> None:
-        r"""Initialize spacecraft properties, perturbation toggles, and steering laws.
+        r"""Initialise spacecraft parameters, perturbation toggles, and steering laws.
 
         Args:
             mass: Dry or wet initial spacecraft mass in kilograms. Defaults to 500.0.
-            drag_area: Frontal aerodynamic drag reference area in square meters. Defaults to 2.0.
+            drag_area: Frontal aerodynamic drag reference area in square metres. Defaults to 2.0.
             cd: Dimensionless aerodynamic drag coefficient. Defaults to 2.2.
-            srp_area: Solar radiation pressure illuminated area in square meters. Defaults to 4.0.
+            srp_area: Solar radiation pressure illuminated area in square metres. Defaults to 4.0.
             cr: Dimensionless radiation pressure reflectivity coefficient. Defaults to 1.2.
             isp: Specific impulse in seconds. Defaults to 1800.0.
             use_j2: Enable J2 oblateness harmonic perturbation. Defaults to True.
@@ -89,12 +94,12 @@ class SpacecraftPropagator:
             use_srp: Enable solar radiation pressure with cylindrical shadowing. Defaults to False.
             use_thrust: Enable active thruster acceleration. Defaults to False.
             mu: Central body gravitational parameter in m^3/s^2. Defaults to G_EARTH.
-            r_body: Central body mean radius in meters. Defaults to R_EARTH.
+            r_body: Central body mean radius in metres. Defaults to R_EARTH.
             area_drag: Parameter alias for drag_area. Defaults to None.
             area_srp: Parameter alias for srp_area. Defaults to None.
             thrust_mag: Continuous thrust magnitude in Newtons. Defaults to 0.0.
             thrust_steering_law: Optional callable returning thrust acceleration vector. Defaults to None.
-            **kwargs: Backward-compatibility keyword arguments.
+            kwargs: Supplementary backward-compatibility keyword arguments.
 
         Raises:
             ValueError: If mass, isp, mu, or r_body are non-positive.
@@ -130,7 +135,7 @@ class SpacecraftPropagator:
         self.use_srp: bool = bool(use_srp)
         self.use_thrust: bool = bool(use_thrust)
 
-        # Propulsion state, guidance configuration, and status monitors
+        # Propulsion state, guidance configuration, and monitors
         self.thrust_mode: str = "none"
         self.thrust_params: Dict[str, Union[float, np.ndarray]] = {}
         self.thrust_mag: float = float(thrust_mag)
@@ -259,7 +264,7 @@ class SpacecraftPropagator:
         )
 
     # ========================================================================
-    # STATE VECTOR DERIVATIVE JUNCTION
+    # STATE VECTOR DERIVATIVE JUNCTIONS
     # ========================================================================
 
     def derivatives(self, t: float, state: np.ndarray) -> np.ndarray:
@@ -282,7 +287,7 @@ class SpacecraftPropagator:
         v = state[3:6]
         current_mass = float(state[6]) if len(state) >= 7 else self.mass
 
-        # Atmospheric Re-entry / Ground Impact Floor (80 km boundary interface)
+        # Atmospheric Re-entry / Ground Impact Boundary (80 km altitude floor)
         r_mag = np.linalg.norm(r)
         if r_mag <= (self.r_body + REENTRY_ALTITUDE_THRESHOLD):
             self.reentry_detected = True
@@ -334,6 +339,29 @@ class SpacecraftPropagator:
             return np.concatenate((v, a_total, [m_dot]))
         return np.concatenate((v, a_total))
 
+    def _stm_derivatives(self, t: float, state_aug: np.ndarray) -> np.ndarray:
+        r"""Evaluate coupled 42-state dynamics: $[d\mathbf{r}/dt, d\mathbf{v}/dt, \text{vec}(d\Phi/dt)]^T$."""
+        x = state_aug[0:6]
+        phi = state_aug[6:42].reshape((6, 6))
+
+        r = x[0:3]
+        if np.linalg.norm(r) <= (self.r_body + REENTRY_ALTITUDE_THRESHOLD):
+            self.reentry_detected = True
+            return np.zeros_like(state_aug)
+
+        # Baseline kinematics and physical dynamics
+        dx = self.derivatives(t, x)[0:6]
+
+        # Evaluate system plant Jacobian A(t)
+        g_mat = gravity_gradient_tensor(r, mu=self.mu, use_j2=self.use_j2, r_body=self.r_body)
+        a_mat = np.zeros((6, 6), dtype=np.float64)
+        a_mat[0:3, 3:6] = np.eye(3, dtype=np.float64)
+        a_mat[3:6, 0:3] = g_mat
+
+        # Variational equation dPhi/dt = A(t) @ Phi(t)
+        dphi = a_mat @ phi
+        return np.concatenate((dx, dphi.ravel()))
+
     # ========================================================================
     # NUMERICAL INTEGRATION
     # ========================================================================
@@ -357,7 +385,7 @@ class SpacecraftPropagator:
         r"""Propagate Cartesian state vectors forward across the designated time duration.
 
         Args:
-            r0: Initial position vector in the ECI frame of shape `(3,)` in meters. Defaults to None.
+            r0: Initial position vector in the ECI frame of shape `(3,)` in metres. Defaults to None.
             v0: Initial velocity vector in the ECI frame of shape `(3,)` in m/s. Defaults to None.
             t_span: Total propagation duration in seconds. Defaults to 86400.0.
             dt: Fixed integration step size or initial candidate step size in seconds. Defaults to 10.0.
@@ -369,7 +397,7 @@ class SpacecraftPropagator:
             h_min: Minimum allowable step size for adaptive integration in seconds. Defaults to 1e-4.
             h_max: Maximum allowable step size for adaptive integration in seconds. Defaults to 86400.0.
             state0: Pre-assembled initial state vector array `(r0, v0 [, m0])`. Defaults to None.
-            **kwargs: Additional backward-compatibility keyword arguments.
+            kwargs: Supplementary backward-compatibility keyword arguments.
 
         Returns:
             Tuple containing:
@@ -421,9 +449,7 @@ class SpacecraftPropagator:
 
             actual_dt = times[1] - times[0] if num_steps > 1 else float(dt)
             for i in range(1, num_steps):
-                states[i] = rk4_step(
-                    self.derivatives, times[i - 1], states[i - 1], actual_dt
-                )
+                states[i] = rk4_step(self.derivatives, times[i - 1], states[i - 1], actual_dt)
                 r_step_mag = np.linalg.norm(states[i, 0:3])
                 if r_step_mag <= (self.r_body + REENTRY_ALTITUDE_THRESHOLD):
                     self.reentry_detected = True
@@ -464,8 +490,153 @@ class SpacecraftPropagator:
         else:
             raise ValueError(f"Unsupported numerical integration method '{method}'. Choose 'rk4' or 'rk45'.")
 
+    def propagate_with_stm(
+        self,
+        r0: np.ndarray,
+        v0: np.ndarray,
+        t_span: float = 86400.0,
+        dt: float = 10.0,
+        method: str = "rk4",
+        rtol: float = 1e-8,
+        atol: float = 1e-10,
+        h_min: float = 1e-4,
+        h_max: float = 86400.0,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        r"""Propagate orbital states alongside the 6x6 State Transition Matrix $\Phi(t, t_0)$.
+
+        Args:
+            r0: Initial position vector in the ECI frame of shape `(3,)` in metres.
+            v0: Initial velocity vector in the ECI frame of shape `(3,)` in m/s.
+            t_span: Total integration duration in seconds. Defaults to 86400.0.
+            dt: Fixed integration step size or initial candidate step size in seconds. Defaults to 10.0.
+            method: Numerical integrator backend selection ('rk4' or 'rk45'). Defaults to 'rk4'.
+            rtol: Relative error tolerance for adaptive Dormand-Prince ('rk45'). Defaults to 1e-8.
+            atol: Absolute error tolerance for adaptive Dormand-Prince ('rk45'). Defaults to 1e-10.
+            h_min: Minimum allowable step size for adaptive integration in seconds. Defaults to 1e-4.
+            h_max: Maximum allowable step size for adaptive integration in seconds. Defaults to 86400.0.
+
+        Returns:
+            Tuple containing:
+                - times (np.ndarray): Discrete solution epochs of shape `(N,)` in seconds.
+                - states (np.ndarray): Orbit states of shape `(N, 6)` in metres and m/s.
+                - stms (np.ndarray): State Transition Matrices $\Phi(t_k, t_0)$ of shape `(N, 6, 6)`.
+
+        Raises:
+            ValueError: If position or velocity arrays do not have shape `(3,)`, or if t_span is non-positive.
+        """
+        r0_arr = np.asarray(r0, dtype=np.float64)
+        v0_arr = np.asarray(v0, dtype=np.float64)
+        if r0_arr.shape != (3,) or v0_arr.shape != (3,):
+            raise ValueError(f"r0 and v0 must each have shape (3,), got r0={r0_arr.shape} and v0={v0_arr.shape}.")
+        if float(t_span) <= 0.0:
+            raise ValueError(f"t_span must be positive, got {t_span} s.")
+
+        x0 = np.concatenate((r0_arr, v0_arr))
+        phi0 = np.eye(6, dtype=np.float64).ravel()
+        aug0 = np.concatenate((x0, phi0))
+
+        chosen_method = (method or "rk4").strip().lower()
+
+        if chosen_method == "rk4":
+            num_steps = int(round(float(t_span) / float(dt))) + 1
+            times = np.linspace(0.0, float(t_span), num_steps)
+            aug_states = np.zeros((num_steps, 42), dtype=np.float64)
+            aug_states[0] = aug0
+            self.reentry_detected = False
+
+            actual_dt = times[1] - times[0] if num_steps > 1 else float(dt)
+            for i in range(1, num_steps):
+                aug_states[i] = rk4_step(self._stm_derivatives, times[i - 1], aug_states[i - 1], actual_dt)
+                r_step_mag = np.linalg.norm(aug_states[i, 0:3])
+                if r_step_mag <= (self.r_body + REENTRY_ALTITUDE_THRESHOLD):
+                    self.reentry_detected = True
+                    return times[: i + 1], aug_states[: i + 1, 0:6], aug_states[: i + 1, 6:42].reshape((-1, 6, 6))
+
+            return times, aug_states[:, 0:6], aug_states[:, 6:42].reshape((-1, 6, 6))
+
+        elif chosen_method in ("rk45", "dopri5"):
+            self.reentry_detected = False
+            t_hist, y_hist = rk45_adaptive(
+                derivs_func=self._stm_derivatives,
+                t_span=(0.0, float(t_span)),
+                y0=aug0,
+                rtol=float(rtol),
+                atol=float(atol),
+                h_init=float(dt),
+                h_min=float(h_min),
+                h_max=float(h_max),
+            )
+            r_hist_mag = np.linalg.norm(y_hist[:, 0:3], axis=1)
+            below_floor = np.where(r_hist_mag <= (self.r_body + REENTRY_ALTITUDE_THRESHOLD))[0]
+            if len(below_floor) > 0:
+                self.reentry_detected = True
+                first_impact = below_floor[0]
+                t_hist = t_hist[: first_impact + 1]
+                y_hist = y_hist[: first_impact + 1]
+
+            return t_hist, y_hist[:, 0:6], y_hist[:, 6:42].reshape((-1, 6, 6))
+        else:
+            raise ValueError(f"Unsupported numerical integration method '{method}'. Choose 'rk4' or 'rk45'.")
+
+    def propagate_covariance(
+        self,
+        r0: np.ndarray,
+        v0: np.ndarray,
+        cov0: np.ndarray,
+        t_span: float = 86400.0,
+        dt: float = 10.0,
+        method: str = "rk4",
+        rtol: float = 1e-8,
+        atol: float = 1e-10,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        r"""Propagate a 6x6 state covariance matrix forward under linear STM mapping.
+
+        $$\mathbf{P}(t_k) = \Phi(t_k, t_0) \mathbf{P}_0 \Phi(t_k, t_0)^T$$
+
+        Args:
+            r0: Initial position vector in the ECI frame of shape `(3,)` in metres.
+            v0: Initial velocity vector in the ECI frame of shape `(3,)` in m/s.
+            cov0: Initial symmetric 6x6 state covariance matrix $\mathbf{P}_0$ in m^2 and (m/s)^2.
+            t_span: Total propagation duration in seconds. Defaults to 86400.0.
+            dt: Time step size in seconds. Defaults to 10.0.
+            method: Integrator backend ('rk4' or 'rk45'). Defaults to 'rk4'.
+            rtol: Relative tolerance for Dormand-Prince integrator. Defaults to 1e-8.
+            atol: Absolute tolerance for Dormand-Prince integrator. Defaults to 1e-10.
+
+        Returns:
+            Tuple containing:
+                - times (np.ndarray): Solution epochs of shape `(N,)` in seconds.
+                - states (np.ndarray): Orbit state trajectory of shape `(N, 6)` in metres and m/s.
+                - covariances (np.ndarray): Evolved covariance matrices of shape `(N, 6, 6)`.
+
+        Raises:
+            ValueError: If initial covariance matrix does not have shape `(6, 6)`.
+        """
+        cov0_arr = np.asarray(cov0, dtype=np.float64)
+        if cov0_arr.shape != (6, 6):
+            raise ValueError(f"Initial covariance matrix must have shape (6, 6), got {cov0_arr.shape}.")
+
+        times, states, stms = self.propagate_with_stm(
+            r0=r0,
+            v0=v0,
+            t_span=t_span,
+            dt=dt,
+            method=method,
+            rtol=rtol,
+            atol=atol,
+        )
+
+        n_points = len(times)
+        cov_history = np.zeros((n_points, 6, 6), dtype=np.float64)
+
+        for i in range(n_points):
+            phi = stms[i]
+            cov_history[i] = phi @ cov0_arr @ phi.T
+
+        return times, states, cov_history
+
     # ========================================================================
-    # TRAJECTORY VISUALIZATION
+    # TRAJECTORY VISUALISATION
     # ========================================================================
 
     @staticmethod

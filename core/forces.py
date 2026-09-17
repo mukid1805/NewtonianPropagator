@@ -417,3 +417,77 @@ def eci_to_lvlh(
     delta_r_eci = r_deputy - r_chief
 
     return r_eci_to_lvlh @ delta_r_eci
+
+def gravity_gradient_tensor(
+    r: np.ndarray,
+    mu: float = G_EARTH,
+    use_j2: bool = False,
+    j2: float = 1.08262668e-3,
+    r_body: float = R_EARTH,
+) -> np.ndarray:
+    r"""Compute the spatial acceleration Jacobian matrix $\mathbf{G}(\mathbf{r}) = \partial \mathbf{a}/\partial \mathbf{r}$.
+
+    Evaluates the symmetric $3 \times 3$ gravity gradient tensor in the
+    Earth-Centred Inertial (ECI) frame:
+
+    $$\mathbf{G}_{\text{two-body}}(\mathbf{r}) = -\frac{\mu}{\|\mathbf{r}\|^3} \mathbf{I}_{3 \times 3} + \frac{3 \mu}{\|\mathbf{r}\|^5} \left(\mathbf{r} \mathbf{r}^T\right)$$
+
+    When $J_2$ is enabled, the second-order zonal harmonic gradient is
+    superposed:
+
+    $$\mathbf{G}(\mathbf{r}) = \mathbf{G}_{\text{two-body}}(\mathbf{r}) + \mathbf{G}_{J_2}(\mathbf{r})$$
+
+    Args:
+        r: Spacecraft position vector in the ECI frame of shape `(3,)` in metres.
+        mu: Central gravitational parameter in m^3/s^2. Defaults to G_EARTH.
+        use_j2: Flag to superpose the Earth oblateness gradient. Defaults to False.
+        j2: Unnormalised second zonal harmonic coefficient. Defaults to 1.08262668e-3.
+        r_body: Mean volumetric radius of the central body in metres. Defaults to R_EARTH.
+
+    Returns:
+        Symmetric gravity gradient tensor of shape `(3, 3)` in s^-2.
+
+    Raises:
+        ValueError: If position vector does not contain exactly 3 components or has zero magnitude.
+    """
+    r_arr = np.asarray(r, dtype=np.float64)
+    if r_arr.shape != (3,):
+        raise ValueError(f"Position vector r must have shape (3,), got {r_arr.shape}.")
+
+    r_sq = float(np.dot(r_arr, r_arr))
+    if r_sq == 0.0:
+        raise ValueError("Cannot evaluate gravity gradient at central singularity (norm is zero).")
+
+    r_mag = np.sqrt(r_sq)
+    r5 = r_sq * r_sq * r_mag
+
+    # Primary Newtonian central-body tensor
+    g_tensor = (-mu / (r_mag**3)) * np.eye(3, dtype=np.float64) + (3.0 * mu / r5) * np.outer(r_arr, r_arr)
+
+    if not use_j2:
+        return g_tensor
+
+    # Analytical J2 perturbation gradient
+    x, y, z = r_arr[0], r_arr[1], r_arr[2]
+    r7 = r5 * r_sq
+    z_sq = z * z
+    pref = 1.5 * j2 * mu * (r_body**2) / r7
+
+    g_j2 = np.zeros((3, 3), dtype=np.float64)
+
+    # Diagonal terms
+    g_j2[0, 0] = pref * (r_sq * (1.0 - 5.0 * (z_sq / r_sq)) - 2.0 * (x**2) * (1.0 - 7.0 * (z_sq / r_sq)) - 5.0 * (x**2))
+    g_j2[1, 1] = pref * (r_sq * (1.0 - 5.0 * (z_sq / r_sq)) - 2.0 * (y**2) * (1.0 - 7.0 * (z_sq / r_sq)) - 5.0 * (y**2))
+    g_j2[2, 2] = pref * (r_sq * (3.0 - 15.0 * (z_sq / r_sq)) - 2.0 * z_sq * (3.0 - 7.0 * (z_sq / r_sq)) - 10.0 * z_sq)
+
+    # Off-diagonal terms (symmetric)
+    g_j2[0, 1] = pref * (-2.0 * x * y * (1.0 - 7.0 * (z_sq / r_sq)))
+    g_j2[1, 0] = g_j2[0, 1]
+
+    g_j2[0, 2] = pref * (-2.0 * x * z * (3.0 - 7.0 * (z_sq / r_sq)))
+    g_j2[2, 0] = g_j2[0, 2]
+
+    g_j2[1, 2] = pref * (-2.0 * y * z * (3.0 - 7.0 * (z_sq / r_sq)))
+    g_j2[2, 1] = g_j2[1, 2]
+
+    return g_tensor + g_j2

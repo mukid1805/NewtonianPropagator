@@ -45,7 +45,7 @@ python -m unittest discover tests
 ```
 Expected output:
 ```text
-.....
+.....          
 --- RK45 Adaptive Energy Conservation Verification ---
 Orbit Type: Highly Elliptical GTO (e = 0.7265)
 Number of Orbits: 3
@@ -58,12 +58,18 @@ Orbit Type: Circular LEO (e = 0)
 Number of Orbits: 5
 Initial Specific Energy: -28975901.5995 J/kg
 Maximum Relative Energy Drift: 4.54e-12
-.............................
+..................................
 ----------------------------------------------------------------------
-Ran 35 tests in 0.533s
+Ran 40 tests in 2.960s
 
 OK
 ```
+To check and verify the resolved dynamic version from Git metadata using `setuptools_scm`, run the CLI command:
+
+```bash
+python -m setuptools_scm
+```
+
 ---
 
 ## 4. Run Interactive CLI
@@ -84,7 +90,8 @@ Expected output:
 6. Scenario 6: Cislunar Free-Return Trajectory & Lagrange Points
 7. Scenario 7: Earth-to-Mars Interplanetary Mission Design & Flight Dynamics
 8. Scenario 8: Multi-Leg & Gravity Assist Transfers (Earth-Venus-Mars)
-9. Exit
+9. Scenario 9: Two-Impulse Orbital Rendezvous and Docking
+x. Exit
 =================================================================
 Select a scenario to run [1-9]: 
 ```
@@ -178,7 +185,7 @@ python -c "from core import list_available_launchers; print('\n'.join(x['name'] 
 ```
 ---
 
-## Next Steps & API Documentation
+## 7. API Documentation
 For exhaustive function signatures, mathematical formulations and argument definitions across all modules (`forces`, `propagator`, `lambert`, `cr3bp`, etc.), visit the hosted **[NewtonianPropagator API Reference](https://mukid1805.github.io/NewtonianPropagator/)**.
 
 ---

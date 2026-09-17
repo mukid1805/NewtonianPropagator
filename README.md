@@ -19,6 +19,13 @@ A high-fidelity, modular astrodynamics simulation suite written in Python. It su
 
 ## Key Capabilities
 
+* **Variational Dynamics & STM-Based Targeting:**
+  * Coupled 42-DOF numerical integration of the 6-DOF orbital state alongside the $6 \times 6$ State Transition Matrix (STM):
+    $$\dot{\Phi}(t, t_0) = \mathbf{A}(t) \Phi(t, t_0), \quad \Phi(t_0, t_0) = \mathbf{I}_{6 \times 6}$$
+  * Analytical gravity gradient tensor $\mathbf{G}(\mathbf{r}) = \partial \mathbf{a}/\partial \mathbf{r}$ incorporating both point-mass gravity and non-spherical $J_2$ geopotential harmonics.
+  * Rigorous phase-space volume preservation monitoring via Liouville's theorem ($\det \Phi(t, t_0) \equiv 1$ for conservative fields).
+  * Two-point boundary value problem (TPBVP) differential correction solver combining two-body Lambert warm-start velocity seeding with Newton-Raphson sensitivity inversion ($\Phi_{rv}^{-1}$).
+  * Linear covariance mapping for uncertainty propagation: $\mathbf{P}(t) = \Phi(t, t_0) \mathbf{P}_0 \Phi(t, t_0)^T$.
 * **Dual Numerical Solvers & Adaptive Step Control:**
   * **Classical RK4:** Deterministic, fixed-step 4th-order Runge-Kutta integrator.
   * **Adaptive Dormand-Prince (RK45):** Embedded 5(4) pair with adaptive step-size scaling via local truncation error (LTE) monitoring and First Same As Last (FSAL) efficiency.
@@ -104,6 +111,24 @@ $$C_3 = v_\infty^2 = \Vert{}\mathbf{v}_{\text{dep}} - \mathbf{v}_{\text{planet}}
 
 $$\sin\left(\frac{\delta}{2}\right) = \frac{1}{1 + \frac{r_p v_\infty^2}{\mu_p}}$$
 
+### State Transition Matrix & Differential Correction Targeting
+
+* **Variational Equations of Motion (42-DOF System):**
+
+$$\dot{\mathbf{X}}_{\text{aug}} = \begin{bmatrix} \dot{\mathbf{r}} \\ \dot{\mathbf{v}} \\ \text{vec}(\dot{\Phi}) \end{bmatrix} = \begin{bmatrix} \mathbf{v} \\ \mathbf{a}(\mathbf{r}, t) \\ \text{vec}(\mathbf{A}(\mathbf{r}, t) \Phi(t, t_0)) \end{bmatrix}$$
+
+where the first-order Jacobian plant matrix $\mathbf{A}(\mathbf{r}, t)$ is structured as:
+
+$$\mathbf{A}(\mathbf{r}, t) = \begin{bmatrix} \mathbf{0}_{3 \times 3} & \mathbf{I}_{3 \times 3} \\ \mathbf{G}(\mathbf{r}) & \mathbf{0}_{3 \times 3} \end{bmatrix}, \quad \mathbf{G}(\mathbf{r}) = \frac{\partial \mathbf{a}}{\partial \mathbf{r}}$$
+
+* **Newton-Raphson Departure Velocity Correction:**
+Using the upper-right $3 \times 3$ sensitivity partition $\Phi_{rv} = \frac{\partial \mathbf{r}(t_f)}{\partial \mathbf{v}(t_0)}$ :
+
+$$\Delta \mathbf{v}_0^{(k+1)} = \Delta \mathbf{v}_0^{(k)} + \Phi_{rv}^{-1} \left(\mathbf{r}_t(t_f) - \mathbf{r}_c^{(k)}(t_f)\right)$$
+
+* **Arrival Braking Manoeuvre:**
+
+$$\Delta \mathbf{v}_f = \mathbf{v}_t(t_f) - \mathbf{v}_c^-(t_f)$$
 
 ---
 ## Repository Architecture
@@ -114,7 +139,7 @@ NewtonianPropagator/
 │   └── workflows/
 │       ├── docs.yml                         # Automated MkDocs deployment to GitHub Pages
 │       ├── tests.yml                        # Automated multi-OS CI test pipeline
-│       └── update-citation.yml              # Automated CITATION.cff tag sync workflow
+│       └── update-citation.yml              # Automated CITATION.cff tag sync & retag workflow
 ├── core/
 │   ├── __init__.py                          # Package definitions and version hook
 │   ├── constants.py                         # Universal physical, gravitational, and orbital constants
@@ -125,8 +150,9 @@ NewtonianPropagator/
 │   ├── integrators.py                       # Classical RK4 & Adaptive Dormand-Prince (RK45) solvers
 │   ├── lambert.py                           # Universal Variable Lambert problem solver
 │   ├── launchers.py                         # Multi-agency launch vehicle catalog (ISRO, SpaceX, NASA, ULA) & C3 curves
-│   ├── propagator.py                        # Unified 6-DOF / 7-DOF spacecraft propagation engine
+│   ├── propagator.py                        # Unified 6-DOF / 7-DOF / 42-DOF (STM) spacecraft propagation engine
 │   ├── swarm.py                             # Multi-agent constellation and relative motion engine
+│   ├── targeting.py                         # STM-based differential correction & two-impulse rendezvous solver
 │   └── time.py                              # Astronomical time conversions (JD, MJD, J2000 offsets)
 ├── customscripts/
 │   ├── __init__.py
@@ -148,7 +174,8 @@ NewtonianPropagator/
 │   ├── ex05_satellite_swarm_lvlh.py         # Scenario 5: Multi-agent satellite swarm & LVLH relative motion
 │   ├── ex06_cislunar_free_return.py         # Scenario 6: Cislunar free-return & Earth-Moon Lagrange points (CR3BP)
 │   ├── ex07_earth_mars_transfer.py          # Scenario 7: Earth-to-Mars mission design, Porkchop plot & RK45 arc
-│   └── ex08_gravity_assist_transfer.py      # Scenario 8: Automated Earth-Venus-Mars multi-leg gravity assist
+│   ├── ex08_gravity_assist_transfer.py      # Scenario 8: Automated Earth-Venus-Mars multi-leg gravity assist
+│   └── ex09_rendezvous_targeting.py         # Scenario 9: Two-impulse orbital rendezvous & docking (STM differential correction)
 ├── notebooks/
 │   ├── 01_interplanetary_mission_design.ipynb       # Jupyter Notebook 01: Lambert targeting & porkchop plots
 │   └── 02_gravity_assist_and_flyby_mechanics.ipynb  # Jupyter Notebook 02: Hyperbolic scattering & B-plane targeting
@@ -162,6 +189,7 @@ NewtonianPropagator/
 │   ├── test_lambert.py                      # Validation of BVP solver boundary conditions
 │   ├── test_launchers.py                    # Empirical C3 curve decay & Tsiolkovsky multi-stage tests
 │   ├── test_propagator.py                   # 6-DOF/7-DOF engine state transitions and burn window tests
+│   ├── test_stm_targeting.py                # Variational STM dynamics, Liouville determinant, and targeting convergence
 │   ├── test_swarm.py                        # Multi-agent constellation registration and LVLH tests
 │   └── test_time.py                         # Epoch and temporal conversion assertions
 ├── .gitattributes                           # Path overrides & Linguist language filtering
@@ -204,9 +232,10 @@ flowchart TD
     end
 
     %% 3. Superposition Dynamics
-    subgraph DynamicsLayer ["3. Acceleration Superposition Junction (forces.py)"]
+    subgraph DynamicsLayer ["3. Acceleration & Variational Dynamics (forces.py)"]
         F_GRAV["Two-Body Central Gravity<br/>-μ / r³ · r"]:::force
         F_J2["Geopotential Zonal Harmonics<br/>J2, J3, J4 Perturbations"]:::force
+        F_TENSOR["Gravity Gradient Tensor G(r)<br/>∂a/∂r (Point-Mass + J2 Harmonics)"]:::force
         F_DRAG["Diurnal Exponential Drag<br/>Coupled Earth Rotation (ω_E)"]:::force
         F_SRP["Solar Radiation Pressure (SRP)<br/>Cylindrical Umbral Shadow"]:::force
         F_3RD["Third-Body Gravity<br/>Lunar / Solar Point-Masses"]:::force
@@ -216,16 +245,17 @@ flowchart TD
 
     %% 4. Numerical Integration Core
     subgraph IntegratorLayer ["4. Numerical Integration Core (propagator.py)"]
-        DIFF_EQ["Derivative Evaluation<br/>dx/dt = [v, a_net, dm/dt]ᵀ"]:::solver
+        DIFF_EQ["Derivative Evaluation<br/>dx/dt = [v, a_net, dm/dt]ᵀ (6/7-DOF)<br/>dΦ/dt = A(t)·Φ (42-DOF Variational)"]:::solver
         subgraph Solvers ["Integrators"]
             RK4["Deterministic Solver<br/>Fixed-Step 4th-Order Runge-Kutta"]:::solver
             RK45["Adaptive Dormand-Prince (RK45)<br/>LTE Step Control & FSAL Efficiency"]:::solver
         end
-        CONSERV["Conservation Monitors<br/>Specific Energy Drift | Jacobi Constant Drift"]:::solver
+        CONSERV["Conservation & Invariant Monitors<br/>Energy Drift | Jacobi Drift | det(Φ) ≡ 1"]:::solver
     end
 
     %% 5. Downstream Mission Applications
     subgraph ApplicationLayer ["5. Astrodynamic Mission Engines"]
+        TARGET["Targeting Engine (targeting.py)<br/>STM Differential Correction & Two-Impulse Rendezvous"]:::app
         LAMBERT["Lambert Targeter (lambert.py)<br/>Universal Variable Boundary Solver"]:::app
         PORKCHOP["Interplanetary Mission Design<br/>Porkchop Plots & C3 Injection Sizing"]:::app
         FLYBY["Patched-Conic Gravity Assist (flyby.py)<br/>Hyperbolic Turn-Angle Matching (Earth-Venus-Mars)"]:::app
@@ -235,9 +265,9 @@ flowchart TD
 
     %% 6. Outputs & Results
     subgraph OutputLayer ["6. Outputs & Visualizations"]
-        OUT_TRAJ["Propagated Ephemerides & State Histories"]:::output
-        OUT_PLOTS["Interactive Visualizations<br/>3D Orbits, Ground Tracks, Porkchop Plots"]:::output
-        OUT_BUDGET["Flight Optimization Deliverables<br/>Mission Δv Budget & Launch C3 Capacities"]:::output
+        OUT_TRAJ["Propagated Ephemerides & Covariance Histories"]:::output
+        OUT_PLOTS["Interactive Visualizations<br/>3D Orbits, LVLH Docking, Porkchop Plots"]:::output
+        OUT_BUDGET["Flight Optimization Deliverables<br/>Two-Impulse Δv Budget (Δv₀, Δvf) & C3 Capacity"]:::output
     end
 
     %% Connections
@@ -255,6 +285,7 @@ flowchart TD
     F_SRP --> SUM
     F_3RD --> SUM
     F_THRUST --> SUM
+    F_TENSOR --> DIFF_EQ
 
     SUM --> DIFF_EQ
     IN_STATE --> RK4
@@ -262,7 +293,10 @@ flowchart TD
     DIFF_EQ --> RK4
     DIFF_EQ --> RK45
     RK45 --> CONSERV
+    RK4 --> CONSERV
 
+    LAMBERT --> TARGET
+    DIFF_EQ --> TARGET
     LAMBERT --> PORKCHOP
     PORKCHOP --> FLYBY
     LAMBERT -. Initial State / Transfer .-> IN_STATE
@@ -272,6 +306,8 @@ flowchart TD
 
     RK4 --> OUT_TRAJ
     RK45 --> OUT_TRAJ
+    TARGET --> OUT_BUDGET
+    TARGET --> OUT_PLOTS
     FLYBY --> OUT_BUDGET
     PORKCHOP --> OUT_PLOTS
     CR3BP --> OUT_PLOTS
@@ -280,6 +316,6 @@ flowchart TD
 ---
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](https://raw.githubusercontent.com/mukid1805/NewtonianPropagator/refs/heads/main/LICENSE) file for details.
+This project is licensed under the MIT License - see the [**LICENSE**](https://raw.githubusercontent.com/mukid1805/NewtonianPropagator/refs/heads/main/LICENSE) for details.
 
 ---
